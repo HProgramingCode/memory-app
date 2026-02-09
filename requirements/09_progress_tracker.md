@@ -15,16 +15,18 @@
 ## 2. Phase 1 ステップ別進捗
 
 ```
-ステップ1 [██████████] 100%  初期セットアップ
-ステップ2 [██████████] 100%  データモデル・ストア設計
-ステップ3 [██████████] 100%  共通コンポーネント
-ステップ4 [██████████] 100%  ダッシュボード
-ステップ5 [██████████] 100%  カード登録/編集
-ステップ6 [██████████] 100%  復習画面
-ステップ7 [██████████] 100%  設定・エクスポート/インポート
-ステップ8 [█████░░░░░]  50%  仕上げ
+ステップ1  [██████████] 100%  初期セットアップ
+ステップ2  [██████████] 100%  データモデル・ストア設計
+ステップ3  [██████████] 100%  共通コンポーネント
+ステップ4  [██████████] 100%  ダッシュボード
+ステップ5  [██████████] 100%  カード登録/編集
+ステップ6  [██████████] 100%  復習画面
+ステップ7  [██████████] 100%  設定・エクスポート/インポート
+ステップ8  [█████░░░░░]  50%  仕上げ
+ステップ9  [██████████] 100%  Prisma ORM 統合
+ステップ10 [██████████] 100%  自由学習モード・定着率改善
 ────────────────────────────────
-合計       [█████████░]  95%
+合計        [█████████░]  95%
 ```
 
 ---
@@ -126,6 +128,22 @@
 | 9-7 | エクスポート/インポートの API 経由化           | ✅ 完了 | lib/exportImport.ts                         |
 | 9-8 | ビルド確認                                     | ✅ 完了 | `npm run build` 成功                        |
 
+### ステップ 10: 自由学習モード・定着率改善 — ✅ 完了
+
+| #    | タスク                                           | 状態    | 備考                                              |
+| ---- | ------------------------------------------------ | ------- | ------------------------------------------------- |
+| 10-1 | StudyRecord スキーマ・型定義の拡張               | ✅ 完了 | freeStudyCount, againCount, hardCount, goodCount  |
+| 10-2 | Prisma マイグレーション                          | ✅ 完了 | add_study_record_fields                           |
+| 10-3 | study-records API の拡張（rating + mode=free）   | ✅ 完了 | app/api/study-records/route.ts                    |
+| 10-4 | useStudyStore の拡張                             | ✅ 完了 | recordReview(rating), recordFreeStudy, getter追加 |
+| 10-5 | 復習画面の自由学習モード対応                     | ✅ 完了 | mode=free で全カード対象、SRS更新スキップ         |
+| 10-6 | 今日の復習セッション定着率コンポーネント         | ✅ 完了 | TodayMasteryCard.tsx 新規作成                     |
+| 10-7 | 学習サマリーに今日の学習枚数追加                 | ✅ 完了 | StudySummaryCard.tsx 修正                          |
+| 10-8 | デッキ一覧に自由学習ボタン + デッキ別定着率追加  | ✅ 完了 | DeckList.tsx 修正                                 |
+| 10-9 | デッキ詳細ページに定着率 + 学習ボタン追加        | ✅ 完了 | app/decks/[id]/page.tsx 修正                      |
+| 10-10| エクスポート/インポートの新フィールド対応        | ✅ 完了 | export/route.ts, import/route.ts 修正             |
+| 10-11| ビルド確認                                       | ✅ 完了 | `npm run build` 成功                              |
+
 ---
 
 ## 4. 実装済みファイル一覧
@@ -170,10 +188,11 @@
 
 | ファイル                                    | 概要                               |
 | ------------------------------------------- | ---------------------------------- |
-| `components/dashboard/TodayReviewCard.tsx`  | 今日の復習セクション               |
-| `components/dashboard/StudySummaryCard.tsx` | 学習サマリー                       |
-| `components/dashboard/MasteryChart.tsx`     | 定着度チャート                     |
-| `components/dashboard/DeckList.tsx`         | デッキ一覧 + 作成/編集/削除        |
+| `components/dashboard/TodayReviewCard.tsx`  | 今日の復習セクション                     |
+| `components/dashboard/StudySummaryCard.tsx` | 学習サマリー（今日の学習枚数含む）       |
+| `components/dashboard/MasteryChart.tsx`     | 定着度チャート（intervalDays ベース）     |
+| `components/dashboard/TodayMasteryCard.tsx` | 今日の復習セッション定着率               |
+| `components/dashboard/DeckList.tsx`         | デッキ一覧 + 作成/編集/削除 + 自由学習   |
 | `components/card/CardForm.tsx`              | カードフォーム + Markdown エディタ |
 | `components/review/CardImage.tsx`           | カード画像表示                     |
 
@@ -221,3 +240,4 @@
 | 2026-02-09 | Prisma ORM 統合（ステップ 9）完了。データ永続化を LocalStorage → SQLite に移行。                                    |
 | 2026-02-09 | DeckList.tsx ハイドレーションエラー修正。Chip に `component="span"` を追加し、`<p>` 内の `<div>` ネスト問題を解消。 |
 | 2026-02-09 | app/decks/[id]/page.tsx ハイドレーションエラー修正。同様に Chip に `component="span"` を追加。                      |
+| 2026-02-09 | ステップ 10（自由学習モード・定着率改善）完了。自由学習、復習セッション定着率、デッキ別定着率を実装。              |

@@ -3,10 +3,12 @@
 import { Card, CardContent, Typography, Box, Stack } from "@mui/material";
 import StyleIcon from "@mui/icons-material/Style";
 import LocalFireDepartmentIcon from "@mui/icons-material/LocalFireDepartment";
+import MenuBookIcon from "@mui/icons-material/MenuBook";
 
 interface StudySummaryCardProps {
   totalCards: number;
   streak: number;
+  todayStudyCount: number;
 }
 
 /**
@@ -15,6 +17,7 @@ interface StudySummaryCardProps {
 export default function StudySummaryCard({
   totalCards,
   streak,
+  todayStudyCount,
 }: StudySummaryCardProps) {
   return (
     <Card sx={{ height: "100%" }}>
@@ -30,6 +33,15 @@ export default function StudySummaryCard({
                 総カード数
               </Typography>
               <Typography variant="h6">{totalCards} 枚</Typography>
+            </Box>
+          </Box>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+            <MenuBookIcon color="secondary" />
+            <Box>
+              <Typography variant="body2" color="text.secondary">
+                今日の学習枚数
+              </Typography>
+              <Typography variant="h6">{todayStudyCount} 枚</Typography>
             </Box>
           </Box>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>

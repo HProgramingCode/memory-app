@@ -22,9 +22,11 @@ import {
 import AddIcon from "@mui/icons-material/Add";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
+import SchoolIcon from "@mui/icons-material/School";
 import { useRouter } from "next/navigation";
 import { useDeckStore } from "@/stores/useDeckStore";
 import { useCardStore } from "@/stores/useCardStore";
+import { isMastered } from "@/lib/srs";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import EmptyState from "@/components/common/EmptyState";
 
@@ -127,8 +129,12 @@ export default function DeckList() {
       ) : (
         <List disablePadding>
           {decks.map((deck) => {
-            const cardCount = getCardsByDeckId(deck.id).length;
+            const deckCards = getCardsByDeckId(deck.id);
+            const cardCount = deckCards.length;
             const dueCount = getDueCardsByDeckId(deck.id).length;
+            const masteredCount = deckCards.filter(isMastered).length;
+            const masteryPct =
+              cardCount > 0 ? Math.round((masteredCount / cardCount) * 100) : 0;
             return (
               <ListItem
                 key={deck.id}
@@ -140,9 +146,25 @@ export default function DeckList() {
                         size="small"
                         color="primary"
                         onClick={() => router.push(`/review?deckId=${deck.id}`)}
-                        aria-label="学習"
+                        aria-label="復習"
+                        title="今日の復習"
                       >
                         <PlayArrowIcon />
+                      </IconButton>
+                    )}
+                    {cardCount > 0 && (
+                      <IconButton
+                        size="small"
+                        color="secondary"
+                        onClick={() =>
+                          router.push(
+                            `/review?deckId=${deck.id}&mode=free`
+                          )
+                        }
+                        aria-label="自由学習"
+                        title="自由学習"
+                      >
+                        <SchoolIcon />
                       </IconButton>
                     )}
                     <IconButton
@@ -165,7 +187,7 @@ export default function DeckList() {
                     secondary={
                       <Box
                         component="span"
-                        sx={{ display: "flex", gap: 1, mt: 0.5 }}
+                        sx={{ display: "flex", gap: 1, mt: 0.5, flexWrap: "wrap" }}
                       >
                         <Chip
                           component="span"
@@ -179,6 +201,21 @@ export default function DeckList() {
                             label={`復習: ${dueCount}`}
                             size="small"
                             color="primary"
+                            variant="outlined"
+                          />
+                        )}
+                        {cardCount > 0 && (
+                          <Chip
+                            component="span"
+                            label={`定着率: ${masteryPct}%`}
+                            size="small"
+                            color={
+                              masteryPct >= 80
+                                ? "success"
+                                : masteryPct >= 50
+                                ? "warning"
+                                : "default"
+                            }
                             variant="outlined"
                           />
                         )}

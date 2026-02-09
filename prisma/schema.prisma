@@ -42,9 +42,15 @@ model Card {
 
 /// 学習記録（1日の学習実績）
 model StudyRecord {
-  id            String @id @default(uuid())
+  id             String @id @default(uuid())
   /// 日付 (YYYY-MM-DD)
-  date          String @unique
-  /// その日に復習したカード数
-  reviewedCount Int    @default(0)
+  date           String @unique
+  /// その日に復習したカード数（今日の復習）
+  reviewedCount  Int    @default(0)
+  /// その日の自由学習カード数
+  freeStudyCount Int    @default(0)
+  /// 今日の復習での評価別カウント
+  againCount     Int    @default(0)
+  hardCount      Int    @default(0)
+  goodCount      Int    @default(0)
 }

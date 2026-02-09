@@ -29,6 +29,7 @@ and recommended execution order for Agent usage.
 5. design-and-implement-backend
 6. prisma-setup (DB 導入時)
 7. manage-tasks-and-progress
+8. maintain-architecture-doc (コード変更後に随時実行)
 
 ---
 
@@ -75,3 +76,9 @@ and recommended execution order for Agent usage.
 - `manage-tasks-and-progress`  
   Tracks tasks, status, and next actions to ensure smooth workflow  
   日本語補足: タスクと進捗管理。チーム内共有や次のアクションの把握に使用
+
+### Documentation
+
+- `maintain-architecture-doc`  
+  Creates and maintains ARCHITECTURE.md for human understanding and handover  
+  日本語補足: ARCHITECTURE.md の作成・更新。コード変更時に設計ドキュメントを実態と同期させる

@@ -20,6 +20,8 @@ import SearchIcon from "@mui/icons-material/Search";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import SchoolIcon from "@mui/icons-material/School";
+import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import { useRouter } from "next/navigation";
 import { useDeckStore } from "@/stores/useDeckStore";
 import { useCardStore } from "@/stores/useCardStore";
@@ -93,9 +95,76 @@ export default function DeckDetailPage({
             カードを追加
           </Button>
         </Box>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-          {cards.length} 枚のカード
-        </Typography>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            mt: 1,
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <Typography variant="body2" color="text.secondary">
+              {cards.length} 枚のカード
+            </Typography>
+            {cards.length > 0 && (() => {
+              const masteredCount = cards.filter(isMastered).length;
+              const masteryPct = Math.round(
+                (masteredCount / cards.length) * 100
+              );
+              const dueCount = cards.filter(isDueToday).length;
+              return (
+                <>
+                  <Chip
+                    label={`定着率: ${masteryPct}%`}
+                    size="small"
+                    color={
+                      masteryPct >= 80
+                        ? "success"
+                        : masteryPct >= 50
+                        ? "warning"
+                        : "default"
+                    }
+                    variant="outlined"
+                  />
+                  {dueCount > 0 && (
+                    <Chip
+                      label={`要復習: ${dueCount}`}
+                      size="small"
+                      color="primary"
+                      variant="outlined"
+                    />
+                  )}
+                </>
+              );
+            })()}
+          </Box>
+          <Box sx={{ display: "flex", gap: 1 }}>
+            {cards.filter(isDueToday).length > 0 && (
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<PlayArrowIcon />}
+                onClick={() => router.push(`/review?deckId=${id}`)}
+              >
+                復習
+              </Button>
+            )}
+            {cards.length > 0 && (
+              <Button
+                variant="outlined"
+                size="small"
+                color="secondary"
+                startIcon={<SchoolIcon />}
+                onClick={() =>
+                  router.push(`/review?deckId=${id}&mode=free`)
+                }
+              >
+                自由学習
+              </Button>
+            )}
+          </Box>
+        </Box>
       </Box>
 
       {/* 検索 */}
