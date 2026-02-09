@@ -1,0 +1,115 @@
+import { create } from "zustand";
+import { getTodayString } from "@/lib/srs";
+import type { StudyRecord } from "@/types";
+
+interface StudyState {
+  records: StudyRecord[];
+  initialized: boolean;
+
+  /** API から学習記録を取得してストアを初期化 */
+  fetchRecords: () => Promise<void>;
+
+  /** 今日の復習を1枚完了したことを記録 */
+  recordReview: () => Promise<void>;
+
+  /** 連続学習日数（ストリーク）を取得 */
+  getStreak: () => number;
+
+  /** 今日の復習枚数を取得 */
+  getTodayReviewedCount: () => number;
+
+  /** インポート用: ストアのデータを直接置換 */
+  replaceAll: (records: StudyRecord[]) => void;
+}
+
+export const useStudyStore = create<StudyState>()((set, get) => ({
+  records: [],
+  initialized: false,
+
+  fetchRecords: async () => {
+    const res = await fetch("/api/study-records");
+    if (!res.ok) throw new Error("Failed to fetch study records");
+    const records: StudyRecord[] = await res.json();
+    set({ records, initialized: true });
+  },
+
+  recordReview: async () => {
+    const res = await fetch("/api/study-records", { method: "POST" });
+    if (!res.ok) throw new Error("Failed to record review");
+    const record: StudyRecord = await res.json();
+
+    set((state) => {
+      const existing = state.records.find((r) => r.date === record.date);
+      if (existing) {
+        return {
+          records: state.records.map((r) =>
+            r.date === record.date ? record : r
+          ),
+        };
+      }
+      return {
+        records: [...state.records, record],
+      };
+    });
+  },
+
+  getStreak: () => {
+    const records = get().records;
+    if (records.length === 0) return 0;
+
+    const sortedDates = records
+      .filter((r) => r.reviewedCount > 0)
+      .map((r) => r.date)
+      .sort((a, b) => b.localeCompare(a));
+
+    if (sortedDates.length === 0) return 0;
+
+    const today = getTodayString();
+    let streak = 0;
+    let checkDate = today;
+
+    if (sortedDates[0] === today) {
+      streak = 1;
+      const d = new Date();
+      d.setDate(d.getDate() - 1);
+      checkDate = formatDate(d);
+    } else {
+      const d = new Date();
+      d.setDate(d.getDate() - 1);
+      const yesterday = formatDate(d);
+      if (sortedDates[0] !== yesterday) {
+        return 0;
+      }
+      checkDate = yesterday;
+    }
+
+    const dateSet = new Set(sortedDates);
+    while (dateSet.has(checkDate)) {
+      if (checkDate !== today || streak === 0) {
+        streak++;
+      }
+      const d = new Date(checkDate);
+      d.setDate(d.getDate() - 1);
+      checkDate = formatDate(d);
+    }
+
+    return streak;
+  },
+
+  getTodayReviewedCount: () => {
+    const today = getTodayString();
+    const record = get().records.find((r) => r.date === today);
+    return record?.reviewedCount ?? 0;
+  },
+
+  replaceAll: (records) => {
+    set({ records });
+  },
+}));
+
+function formatDate(d: Date): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}

@@ -1,0 +1,50 @@
+---
+description: NextAuth.js v5 (Auth.js) の環境変数設定とベストプラクティス。認証関連ファイルを扱う際に適用
+globs: "**/auth/**/*.{ts,tsx},**/.env*,**/api/auth/**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# NextAuth.js v5 環境変数設定
+
+## 必須環境変数
+
+NextAuth.js v5 では以下の環境変数が必須：
+
+```env
+AUTH_SECRET=your-secret-here  # セッション暗号化用（32文字以上のランダム文字列推奨）
+AUTH_URL=http://localhost:3000  # 認証エンドポイントのベースURL
+```
+
+## 環境変数の設定
+
+### 開発環境
+```env
+AUTH_URL=http://localhost:3000
+```
+
+### 本番環境
+```env
+AUTH_URL=https://yourdomain.com
+```
+
+## 重要な注意点
+
+- `AUTH_URL` が未設定の場合、認証エンドポイントが正しく動作せず、`Unexpected token '<', "<!DOCTYPE"...` のようなJSONパースエラーが発生する
+- 環境変数変更後は開発サーバーを再起動する必要がある
+- `NEXT_PUBLIC_APP_URL` と `AUTH_URL` は通常同じ値を使用する（異なるドメインで認証を処理する場合は別の値を設定可能）
+- `AUTH_SECRET` は本番環境では必ず安全なランダム文字列を使用する（`openssl rand -base64 32` で生成可能）
+
+## トラブルシューティング
+
+認証エラーが発生した場合の確認事項：
+
+1. `.env` ファイルに `AUTH_URL` が設定されているか確認
+2. 環境変数変更後は開発サーバーを再起動
+3. `/api/auth/session` エンドポイントが JSON を返すことを確認（HTML が返されている場合は設定不備の可能性）
+4. ブラウザの開発者ツールの Network タブで認証リクエストのレスポンスを確認
+
+## ベストプラクティス
+
+- `.env.example` に必須環境変数のテンプレートを含める
+- 本番環境では環境変数の存在を起動時に検証する
+- `AUTH_SECRET` は絶対にバージョン管理に含めない
