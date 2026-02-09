@@ -1,0 +1,50 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+/// デッキ（カードのグループ）
+model Deck {
+  id        String   @id @default(uuid())
+  name      String
+  cards     Card[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// フラッシュカード
+model Card {
+  id              String   @id @default(uuid())
+  deckId          String
+  deck            Deck     @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  frontText       String   @default("")
+  backText        String   @default("")
+  frontImageId    String?
+  backImageId     String?
+  /// SRS: 次回復習日 (YYYY-MM-DD)
+  nextReviewDate  String
+  /// SRS: 現在の復習間隔（日数）
+  intervalDays    Int      @default(0)
+  /// SRS: 連続正解回数
+  repetitionCount Int      @default(0)
+  /// SRS: 習熟度ファクター
+  easeFactor      Float    @default(2.5)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+/// 学習記録（1日の学習実績）
+model StudyRecord {
+  id            String @id @default(uuid())
+  /// 日付 (YYYY-MM-DD)
+  date          String @unique
+  /// その日に復習したカード数
+  reviewedCount Int    @default(0)
+}
