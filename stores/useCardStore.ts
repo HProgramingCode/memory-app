@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type { Card, ReviewRating } from "@/types";
 import { getTodayString, isDueToday } from "@/lib/srs";
 import { deleteImage } from "@/lib/imageDb";
+import { toast } from "react-hot-toast";
 
 interface CardState {
   cards: Card[];
@@ -61,52 +62,67 @@ export const useCardStore = create<CardState>()((set, get) => ({
   },
 
   addCard: async (params) => {
-    const res = await fetch("/api/cards", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(params),
-    });
-    if (!res.ok) throw new Error("Failed to create card");
-    const newCard: Card = await res.json();
-    set((state) => ({ cards: [...state.cards, newCard] }));
-    return newCard;
+    try {
+      const res = await fetch("/api/cards", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(params),
+      });
+      if (!res.ok) throw new Error("Failed to create card");
+      const newCard: Card = await res.json();
+      set((state) => ({ cards: [...state.cards, newCard] }));
+      toast.success("カードを作成しました");
+      return newCard;
+    } catch (error) {
+      toast.error("カードの作成に失敗しました");
+      throw error;
+    }
   },
 
   updateCard: async (id, params) => {
-    const res = await fetch(`/api/cards/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(params),
-    });
-    if (!res.ok) throw new Error("Failed to update card");
-    const updated: Card = await res.json();
-    set((state) => ({
-      cards: state.cards.map((c) => (c.id === id ? updated : c)),
-    }));
+    try {
+      const res = await fetch(`/api/cards/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(params),
+      });
+      if (!res.ok) throw new Error("Failed to update card");
+      const updated: Card = await res.json();
+      set((state) => ({
+        cards: state.cards.map((c) => (c.id === id ? updated : c)),
+      }));
+      toast.success("カードを更新しました");
+    } catch (error) {
+      toast.error("カードの更新に失敗しました");
+      throw error;
+    }
   },
 
   deleteCard: async (id) => {
-    const card = get().cards.find((c) => c.id === id);
-    if (card) {
-      // IndexedDB から画像も削除
-      if (card.frontImageId) deleteImage(card.frontImageId);
-      if (card.backImageId) deleteImage(card.backImageId);
+    try {
+      const card = get().cards.find((c) => c.id === id);
+      if (card) {
+        if (card.frontImageId) deleteImage(card.frontImageId);
+        if (card.backImageId) deleteImage(card.backImageId);
+      }
+      const res = await fetch(`/api/cards/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete card");
+      set((state) => ({
+        cards: state.cards.filter((c) => c.id !== id),
+      }));
+      toast.success("カードを削除しました");
+    } catch (error) {
+      toast.error("カードの削除に失敗しました");
+      throw error;
     }
-    const res = await fetch(`/api/cards/${id}`, { method: "DELETE" });
-    if (!res.ok) throw new Error("Failed to delete card");
-    set((state) => ({
-      cards: state.cards.filter((c) => c.id !== id),
-    }));
   },
 
   deleteCardsByDeckId: (deckId) => {
     const cardsToDelete = get().cards.filter((c) => c.deckId === deckId);
-    // 画像も削除
     cardsToDelete.forEach((card) => {
       if (card.frontImageId) deleteImage(card.frontImageId);
       if (card.backImageId) deleteImage(card.backImageId);
     });
-    // ローカルストアから削除（API側はDeck cascadeDeleteで処理済み）
     set((state) => ({
       cards: state.cards.filter((c) => c.deckId !== deckId),
     }));
@@ -133,16 +149,21 @@ export const useCardStore = create<CardState>()((set, get) => ({
   },
 
   applyReview: async (cardId, rating) => {
-    const res = await fetch(`/api/cards/${cardId}/review`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ rating }),
-    });
-    if (!res.ok) throw new Error("Failed to apply review");
-    const updated: Card = await res.json();
-    set((state) => ({
-      cards: state.cards.map((c) => (c.id === cardId ? updated : c)),
-    }));
+    try {
+      const res = await fetch(`/api/cards/${cardId}/review`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rating }),
+      });
+      if (!res.ok) throw new Error("Failed to apply review");
+      const updated: Card = await res.json();
+      set((state) => ({
+        cards: state.cards.map((c) => (c.id === cardId ? updated : c)),
+      }));
+    } catch (error) {
+      toast.error("復習の記録に失敗しました");
+      throw error;
+    }
   },
 
   searchCards: (query) => {

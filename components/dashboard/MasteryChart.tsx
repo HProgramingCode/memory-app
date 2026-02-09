@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, CardContent, Typography, Box } from "@mui/material";
+import { Card, CardContent, Typography, Box, Stack, Divider } from "@mui/material";
 import { isMastered } from "@/lib/srs";
 import type { Card as CardType } from "@/types";
 
@@ -24,59 +24,66 @@ export default function MasteryChart({ cards }: MasteryChartProps) {
   const masteredArc = (masteredPct / 100) * circumference;
 
   return (
-    <Card>
-      <CardContent sx={{ p: 3 }}>
-        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+    <Card
+      sx={{
+        height: "100%",
+        borderRadius: 4,
+        boxShadow: "0 4px 20px 0 rgba(0,0,0,0.05)",
+        border: "1px solid",
+        borderColor: "divider",
+      }}
+    >
+      <CardContent sx={{ p: 3, display: "flex", flexDirection: "column", height: "100%" }}>
+        <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 600, mb: 1 }}>
           カードの定着度
         </Typography>
 
         {total === 0 ? (
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={{ textAlign: "center", py: 3 }}
-          >
-            カードを登録すると定着度が表示されます
-          </Typography>
+          <Box sx={{ flexGrow: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Typography variant="body2" color="text.secondary">
+              カードを登録しましょう
+            </Typography>
+          </Box>
         ) : (
           <Box
             sx={{
               display: "flex",
+              flexDirection: "column",
               alignItems: "center",
               justifyContent: "center",
-              gap: 3,
+              flexGrow: 1,
+              gap: 2,
               mt: 1,
             }}
           >
             {/* SVG ドーナツチャート */}
-            <Box sx={{ position: "relative", width: 120, height: 120 }}>
+            <Box sx={{ position: "relative", width: 140, height: 140 }}>
               <svg
-                width="120"
-                height="120"
-                viewBox="0 0 120 120"
+                width="140"
+                height="140"
+                viewBox="0 0 140 140"
                 style={{ transform: "rotate(-90deg)" }}
               >
                 {/* 背景円 */}
                 <circle
-                  cx="60"
-                  cy="60"
+                  cx="70"
+                  cy="70"
                   r={radius}
                   fill="none"
-                  stroke="#E0E0E0"
+                  stroke="rgba(0,0,0,0.04)"
                   strokeWidth="12"
                 />
                 {/* 定着済み部分 */}
                 <circle
-                  cx="60"
-                  cy="60"
+                  cx="70"
+                  cy="70"
                   r={radius}
                   fill="none"
-                  stroke="#66BB6A"
+                  stroke="#4CAF50"
                   strokeWidth="12"
-                  strokeDasharray={`${masteredArc} ${
-                    circumference - masteredArc
-                  }`}
+                  strokeDasharray={`${masteredArc} ${circumference - masteredArc}`}
                   strokeLinecap="round"
+                  style={{ transition: "stroke-dasharray 0.5s ease" }}
                 />
               </svg>
               <Box
@@ -88,38 +95,28 @@ export default function MasteryChart({ cards }: MasteryChartProps) {
                   textAlign: "center",
                 }}
               >
-                <Typography variant="h6" sx={{ lineHeight: 1 }}>
+                <Typography variant="h5" sx={{ fontWeight: 800, color: "text.primary" }}>
                   {Math.round(masteredPct)}%
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Mastered
                 </Typography>
               </Box>
             </Box>
 
             {/* 凡例 */}
-            <Box>
-              <Box
-                sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}
-              >
-                <Box
-                  sx={{
-                    width: 12,
-                    height: 12,
-                    borderRadius: "50%",
-                    bgcolor: "#66BB6A",
-                  }}
-                />
-                <Typography variant="body2">定着済み: {mastered} 枚</Typography>
-              </Box>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <Box
-                  sx={{
-                    width: 12,
-                    height: 12,
-                    borderRadius: "50%",
-                    bgcolor: "#E0E0E0",
-                  }}
-                />
-                <Typography variant="body2">学習中: {learning} 枚</Typography>
-              </Box>
+            <Box sx={{ width: "100%", mt: 1 }}>
+              <Stack direction="row" justifyContent="space-around" spacing={2}>
+                <Box sx={{ textAlign: "center" }}>
+                  <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1 }}>{mastered}</Typography>
+                  <Typography variant="caption" color="text.secondary">定着済み</Typography>
+                </Box>
+                <Divider orientation="vertical" flexItem sx={{ opacity: 0.6 }} />
+                <Box sx={{ textAlign: "center" }}>
+                  <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1 }}>{learning}</Typography>
+                  <Typography variant="caption" color="text.secondary">学習中</Typography>
+                </Box>
+              </Stack>
             </Box>
           </Box>
         )}

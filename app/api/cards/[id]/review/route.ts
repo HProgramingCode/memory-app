@@ -3,11 +3,18 @@ import { prisma } from "@/lib/prisma";
 import { calculateNextReview } from "@/lib/srs";
 import type { Card, ReviewRating } from "@/types";
 
+import { auth } from "@/auth";
+
 /** POST /api/cards/:id/review - 復習結果を反映 */
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { id } = await params;
   const { rating } = await request.json();
 
@@ -15,8 +22,9 @@ export async function POST(
     return NextResponse.json({ error: "Invalid rating" }, { status: 400 });
   }
 
+  // 存在確認と権限チェック
   const existing = await prisma.card.findUnique({ where: { id } });
-  if (!existing) {
+  if (!existing || existing.userId !== session.user.id) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
