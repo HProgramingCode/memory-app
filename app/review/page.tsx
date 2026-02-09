@@ -11,6 +11,10 @@ import {
   Fade,
   Stack,
   IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -45,6 +49,11 @@ function ReviewContent() {
   const recordReview = useStudyStore((s) => s.recordReview);
   const recordFreeStudy = useStudyStore((s) => s.recordFreeStudy);
 
+  // 自由学習の開始ダイアログ
+  const [showStartDialog, setShowStartDialog] = useState(false);
+  const getLastStudyIndex = useStudyStore((s) => s.getLastStudyIndex);
+  const setLastStudyIndex = useStudyStore((s) => s.setLastStudyIndex);
+
   // 復習対象カードをシャッフルして保持
   const [reviewCards, setReviewCards] = useState<CardType[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -52,47 +61,105 @@ function ReviewContent() {
   const [fadeIn, setFadeIn] = useState(true);
   const [isCompleted, setIsCompleted] = useState(false);
 
-  // 初回マウント時にカードをシャッフルして取得
+  // 初回マウント時にカードを取得
   useEffect(() => {
-    let cards: CardType[];
-    if (isFreeMode && deckId) {
+    if (!deckId) return;
+
+    let cards: CardType[] = [];
+    if (isFreeMode) {
       // 自由学習: デッキ内の全カードが対象
       cards = getCardsByDeckId(deckId);
-    } else if (deckId) {
-      cards = getDueCardsByDeckId(deckId);
+      // 中断データがあるか確認
+      const lastIndex = getLastStudyIndex(deckId);
+      if (lastIndex > 0 && lastIndex < cards.length) {
+        // ダイアログを表示して user に選ばせる
+        setShowStartDialog(true);
+        // 一時的に保持（まだ開始しない）
+        setReviewCards(cards);
+        return;
+      }
+      // 中断データがない場合は「初めから」と同じ扱い（下へ続く）
     } else {
-      cards = getDueCards();
+      cards = getDueCardsByDeckId(deckId);
+      if (cards.length === 0) {
+        setIsCompleted(true);
+        return;
+      }
     }
-    // Fisher-Yates シャッフル
-    const shuffled = [...cards];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+
+    // 通常モード or 自由学習(初回)
+    // 中断データがない場合、または通常モードなら即開始
+    if (!isFreeMode || (isFreeMode && getLastStudyIndex(deckId) === 0)) {
+      startSession(cards, 0, true); // 初回はシャッフル
     }
-    setReviewCards(shuffled);
-    if (shuffled.length === 0) {
+  }, [deckId, isFreeMode, getCardsByDeckId, getDueCardsByDeckId, getLastStudyIndex]);
+
+  const startSession = (cards: CardType[], startIndex: number, shuffle: boolean) => {
+    let targetCards = [...cards];
+    if (shuffle) {
+      // Fisher-Yates シャッフル
+      for (let i = targetCards.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [targetCards[i], targetCards[j]] = [targetCards[j], targetCards[i]];
+      }
+    } else {
+      // シャッフルしない場合（続きから）
+      // そのままの順序（ID順など）で利用
+    }
+
+    setReviewCards(targetCards);
+    setCurrentIndex(startIndex);
+    if (targetCards.length === 0 || startIndex >= targetCards.length) {
       setIsCompleted(true);
     }
-  }, []);
+    setShowStartDialog(false);
+  };
 
   const currentCard = reviewCards[currentIndex];
   const total = reviewCards.length;
   const progress = total > 0 ? ((currentIndex + 1) / total) * 100 : 0;
+
+  // インデックスが変わるたびに保存（自由学習のみ）
+  useEffect(() => {
+    if (isFreeMode && deckId && reviewCards.length > 0) {
+      setLastStudyIndex(deckId, currentIndex);
+    }
+  }, [currentIndex, isFreeMode, deckId, reviewCards, setLastStudyIndex]);
+
+  const handleNext = useCallback(async () => {
+    if (!currentCard) return;
+
+    if (isFreeMode) {
+      await recordFreeStudy();
+    }
+
+    setFadeIn(false);
+    setTimeout(() => {
+      if (currentIndex + 1 >= total) {
+        setIsCompleted(true);
+        if (isFreeMode && deckId) {
+          setLastStudyIndex(deckId, 0); // 完了したらリセット
+        }
+      } else {
+        setCurrentIndex((prev) => prev + 1);
+        setShowAnswer(false);
+      }
+      setFadeIn(true);
+    }, 200);
+  }, [currentCard, currentIndex, total, isFreeMode, deckId, recordFreeStudy, setLastStudyIndex]);
 
   const handleRate = useCallback(
     async (rating: ReviewRating) => {
       if (!currentCard) return;
 
       if (isFreeMode) {
-        // 自由学習: SRS更新なし、カウントのみ
-        await recordFreeStudy();
-      } else {
-        // 今日の復習: SRS更新 + rating付き学習記録
-        await applyReview(currentCard.id, rating);
-        await recordReview(rating);
+        await handleNext();
+        return;
       }
 
-      // 次のカードへ遷移
+      await applyReview(currentCard.id, rating);
+      await recordReview(rating);
+
       setFadeIn(false);
       setTimeout(() => {
         if (currentIndex + 1 >= total) {
@@ -104,10 +171,37 @@ function ReviewContent() {
         setFadeIn(true);
       }, 200);
     },
-    [currentCard, currentIndex, total, isFreeMode, applyReview, recordReview, recordFreeStudy]
+    [currentCard, currentIndex, total, isFreeMode, applyReview, recordReview, handleNext]
   );
 
-  // セッション完了画面
+  const handleFinish = () => {
+    router.push("/");
+  };
+
+
+  // ダイアログ表示
+  if (showStartDialog) {
+    return (
+      <Dialog open={true}>
+        <DialogTitle>学習を再開しますか？</DialogTitle>
+        <DialogContent>
+          <Typography>
+            前回の続きから ({getLastStudyIndex(deckId!) + 1} / {reviewCards.length}) 開始しますか？
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => startSession(reviewCards, 0, true)}>
+            初めから（シャッフル）
+          </Button>
+          <Button onClick={() => startSession(reviewCards, getLastStudyIndex(deckId!), false)} autoFocus>
+            続きから
+          </Button>
+        </DialogActions>
+      </Dialog>
+    );
+  }
+
+  // 完了画面
   if (isCompleted) {
     return (
       <Box
@@ -131,8 +225,8 @@ function ReviewContent() {
           {total > 0
             ? `${total} 枚のカードを${isFreeMode ? "学習" : "復習"}しました`
             : isFreeMode
-            ? "このデッキにカードがありません"
-            : "今日の復習はありません"}
+              ? "このデッキにカードがありません"
+              : "今日の復習はありません"}
         </Typography>
         <Button variant="contained" onClick={() => router.push("/")}>
           ダッシュボードに戻る
@@ -252,6 +346,25 @@ function ReviewContent() {
             >
               答えを見る
             </Button>
+          ) : isFreeMode ? (
+            <Stack spacing={2}>
+              <Button
+                variant="contained"
+                fullWidth
+                size="large"
+                onClick={handleNext}
+              >
+                次へ
+              </Button>
+              <Button
+                variant="outlined"
+                fullWidth
+                color="secondary"
+                onClick={handleFinish}
+              >
+                終了
+              </Button>
+            </Stack>
           ) : (
             <Stack spacing={1}>
               <Typography
@@ -261,7 +374,7 @@ function ReviewContent() {
               >
                 理解度を選択してください
               </Typography>
-              <Stack direction="row" spacing={1}>
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
                 <Button
                   variant="contained"
                   fullWidth

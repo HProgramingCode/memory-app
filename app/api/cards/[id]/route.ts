@@ -1,14 +1,22 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+import { auth } from "@/auth";
+
 /** GET /api/cards/:id - カード取得 */
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { id } = await params;
   const card = await prisma.card.findUnique({ where: { id } });
-  if (!card) {
+
+  if (!card || card.userId !== session.user.id) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
   return NextResponse.json(card);
@@ -19,16 +27,33 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   const { id } = await params;
   const body = await request.json();
   const { frontText, backText, frontImageId, backImageId, deckId } = body;
+
+  // 存在確認と権限チェック
+  const existing = await prisma.card.findUnique({ where: { id } });
+  if (!existing || existing.userId !== session.user.id) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
 
   const data: Record<string, unknown> = {};
   if (frontText !== undefined) data.frontText = frontText;
   if (backText !== undefined) data.backText = backText;
   if (frontImageId !== undefined) data.frontImageId = frontImageId;
   if (backImageId !== undefined) data.backImageId = backImageId;
-  if (deckId !== undefined) data.deckId = deckId;
+  if (deckId !== undefined) {
+    // デッキ移動の場合は移動先デッキの権限も確認
+    const newDeck = await prisma.deck.findUnique({ where: { id: deckId } });
+    if (!newDeck || newDeck.userId !== session.user.id) {
+      return NextResponse.json({ error: "Target deck not found" }, { status: 404 });
+    }
+    data.deckId = deckId;
+  }
 
   const card = await prisma.card.update({
     where: { id },
@@ -42,7 +67,18 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   const { id } = await params;
+
+  // 存在確認と権限チェック
+  const existing = await prisma.card.findUnique({ where: { id } });
+  if (!existing || existing.userId !== session.user.id) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   await prisma.card.delete({ where: { id } });
   return NextResponse.json({ success: true });
 }

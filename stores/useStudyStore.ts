@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { getTodayString } from "@/lib/srs";
 import type { StudyRecord, ReviewRating } from "@/types";
+import { toast } from "react-hot-toast";
 
 interface StudyState {
   records: StudyRecord[];
@@ -35,6 +36,12 @@ interface StudyState {
 
   /** インポート用: ストアのデータを直接置換 */
   replaceAll: (records: StudyRecord[]) => void;
+
+  /** 自由学習の中断位置（インデックス）を取得 */
+  getLastStudyIndex: (deckId: string) => number;
+
+  /** 自由学習の中断位置（インデックス）を保存 */
+  setLastStudyIndex: (deckId: string, index: number) => void;
 }
 
 /** ストア内で record を upsert するヘルパー */
@@ -65,25 +72,36 @@ export const useStudyStore = create<StudyState>()((set, get) => ({
   },
 
   recordReview: async (rating: ReviewRating) => {
-    const res = await fetch("/api/study-records", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ rating }),
-    });
-    if (!res.ok) throw new Error("Failed to record review");
-    const record: StudyRecord = await res.json();
-    set((state) => upsertRecord(state, record));
+    try {
+      const res = await fetch("/api/study-records", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rating }),
+      });
+      if (!res.ok) throw new Error("Failed to record review");
+      const record: StudyRecord = await res.json();
+      set((state) => upsertRecord(state, record));
+    } catch (error) {
+      console.error(error);
+      toast.error("学習記録の保存に失敗しました");
+      // 復習自体は進めるため投げ直さない、またはUI側でケアする
+    }
   },
 
   recordFreeStudy: async () => {
-    const res = await fetch("/api/study-records", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mode: "free" }),
-    });
-    if (!res.ok) throw new Error("Failed to record free study");
-    const record: StudyRecord = await res.json();
-    set((state) => upsertRecord(state, record));
+    try {
+      const res = await fetch("/api/study-records", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "free" }),
+      });
+      if (!res.ok) throw new Error("Failed to record free study");
+      const record: StudyRecord = await res.json();
+      set((state) => upsertRecord(state, record));
+    } catch (error) {
+      console.error(error);
+      toast.error("学習記録の保存に失敗しました");
+    }
   },
 
   getStreak: () => {
@@ -166,6 +184,19 @@ export const useStudyStore = create<StudyState>()((set, get) => ({
 
   replaceAll: (records) => {
     set({ records });
+  },
+
+  getLastStudyIndex: (deckId) => {
+    if (typeof window === "undefined") return 0;
+    const key = `freeStudyIndex:${deckId}`;
+    const stored = localStorage.getItem(key);
+    return stored ? parseInt(stored, 10) : 0;
+  },
+
+  setLastStudyIndex: (deckId, index) => {
+    if (typeof window === "undefined") return;
+    const key = `freeStudyIndex:${deckId}`;
+    localStorage.setItem(key, index.toString());
   },
 }));
 

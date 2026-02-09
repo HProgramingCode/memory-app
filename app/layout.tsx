@@ -9,6 +9,10 @@ export const metadata: Metadata = {
     "忘却曲線に基づく間隔反復学習で、知識を効率的に長期記憶へ定着させるWebアプリ",
 };
 
+import ToastProvider from "@/components/common/ToastProvider";
+
+import { SessionProvider } from "next-auth/react";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -17,10 +21,13 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <body>
-        <ThemeRegistry>
-          <DataInitializer />
-          {children}
-        </ThemeRegistry>
+        <SessionProvider>
+          <ThemeRegistry>
+            <DataInitializer />
+            <ToastProvider />
+            {children}
+          </ThemeRegistry>
+        </SessionProvider>
       </body>
     </html>
   );

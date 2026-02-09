@@ -21,6 +21,7 @@ import FormatListNumberedIcon from "@mui/icons-material/FormatListNumbered";
 import CodeIcon from "@mui/icons-material/Code";
 import TitleIcon from "@mui/icons-material/Title";
 import { v4 as uuidv4 } from "uuid";
+import { useSession } from "next-auth/react";
 import { useDeckStore } from "@/stores/useDeckStore";
 import { useCardStore } from "@/stores/useCardStore";
 import { saveImage, deleteImage } from "@/lib/imageDb";
@@ -48,6 +49,9 @@ export default function CardForm({
   onSaved,
   onCancel,
 }: CardFormProps) {
+  const { data: session } = useSession();
+  const userId = session?.user?.id;
+
   const decks = useDeckStore((s) => s.decks);
   const addCard = useCardStore((s) => s.addCard);
   const updateCard = useCardStore((s) => s.updateCard);
@@ -86,7 +90,9 @@ export default function CardForm({
     let finalBackImageId = backImageId;
 
     if (newFrontImage) {
-      const id = uuidv4();
+      // ユーザーIDがある場合はプレフィックスを付ける
+      const prefix = userId ? `image:${userId}:` : "";
+      const id = `${prefix}${uuidv4()}`;
       await saveImage(id, newFrontImage);
       // 古い画像があれば削除
       if (
@@ -99,7 +105,8 @@ export default function CardForm({
     }
 
     if (newBackImage) {
-      const id = uuidv4();
+      const prefix = userId ? `image:${userId}:` : "";
+      const id = `${prefix}${uuidv4()}`;
       await saveImage(id, newBackImage);
       if (
         existingCard?.backImageId &&
@@ -148,7 +155,7 @@ export default function CardForm({
     <Toolbar
       variant="dense"
       disableGutters
-      sx={{ minHeight: 36, gap: 0.5, px: 0.5 }}
+      sx={{ minHeight: 36, gap: 0.5, px: 0.5, flexWrap: "wrap" }}
     >
       <IconButton
         size="small"
