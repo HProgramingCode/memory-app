@@ -41,8 +41,8 @@ Phase 1「ローカル完結型 MVP」。認証機能やクラウド同期はな
 ### ダッシュボード表示
 
 1. `app/page.tsx` が描画される
-2. ストアから「今日期限のカード数」「全カード数」「連続学習日数」「定着度」を計算してダッシュボードに表示
-3. デッキ一覧を表示。各デッキには「カード枚数」「要復習数」が付く
+2. ストアから「今日期限のカード数」「全カード数」「連続学習日数」「定着度」「今日の学習枚数」「復習セッション定着率」を計算してダッシュボードに表示
+3. デッキ一覧を表示。各デッキには「カード枚数」「要復習数」「定着率」「自由学習ボタン」が付く
 
 ### カードの登録・編集
 
@@ -54,7 +54,7 @@ Phase 1「ローカル完結型 MVP」。認証機能やクラウド同期はな
    - テキストデータは **API → SQLite DB** に保存される（`POST /api/cards`）
    - Zustand ストアにも即座に反映される
 
-### 復習セッション
+### 復習セッション（今日の復習）
 
 1. ダッシュボードの「学習を開始する」ボタンから `/review` に遷移
 2. `nextReviewDate <= 今日の日付` のカードが復習対象として抽出される
@@ -65,8 +65,18 @@ Phase 1「ローカル完結型 MVP」。認証機能やクラウド同期はな
    - **普通 (hard):** 間隔 × 1.5倍
    - **簡単 (good):** 間隔 × easeFactor倍
 6. 計算結果は `POST /api/cards/:id/review` でDB更新、ストアにも反映
-7. 同時に `POST /api/study-records` で「今日復習した枚数」を+1カウント
+7. 同時に `POST /api/study-records` で「今日復習した枚数」を+1カウント、**評価別カウント**（againCount / hardCount / goodCount）も記録
 8. 全カード完了後、完了画面が表示される
+
+### 自由学習セッション
+
+1. デッキ一覧の「自由学習」ボタン、またはデッキ詳細の「自由学習」ボタンから `/review?deckId=xxx&mode=free` に遷移
+2. 指定デッキの**全カード**が対象として抽出される（SRS スケジュールに関係なく）
+3. カードは Fisher-Yates アルゴリズムでシャッフルされる
+4. ユーザーは通常の復習と同様に表面→裏面→評価を行う
+5. **SRS パラメータは更新されない**（nextReviewDate, intervalDays 等は変わらない）
+6. `POST /api/study-records` で `freeStudyCount` を+1カウント（評価別カウントは記録しない）
+7. 全カード完了後、完了画面が表示される
 
 ### エクスポート/インポート
 
@@ -123,7 +133,7 @@ memory-app/
 | `/api/cards` | GET / POST | カード一覧取得・作成 |
 | `/api/cards/[id]` | GET / PUT / DELETE | カード個別操作 |
 | `/api/cards/[id]/review` | POST | 復習結果の反映（SRS計算） |
-| `/api/study-records` | GET / POST | 学習記録の取得・今日の復習1件記録 |
+| `/api/study-records` | GET / POST | 学習記録の取得・復習/自由学習1件記録（rating + mode 対応） |
 | `/api/export` | GET | 全データJSON取得 |
 | `/api/import` | POST | 全データJSON置換 |
 
@@ -135,8 +145,9 @@ memory-app/
 | `ThemeRegistry` | MUI テーマとCSSベースラインを全ページに適用 |
 | `AppLayout` | ヘッダー（アプリ名+設定ボタン）+ メインコンテンツ領域の共通レイアウト |
 | `CardForm` | カードの登録・編集フォーム。Markdown エディタ + プレビュー + 画像アップロード |
-| `DeckList` | デッキ一覧の表示・作成・名前変更・削除（コンテキストメニュー付き） |
-| `MasteryChart` | 定着度のドーナツチャート（SVG描画。外部チャートライブラリ不使用） |
+| `DeckList` | デッキ一覧の表示・作成・名前変更・削除（コンテキストメニュー付き）+ 自由学習ボタン + デッキ別定着率 |
+| `MasteryChart` | 全体定着度のドーナツチャート（SVG描画。intervalDays ベース。外部チャートライブラリ不使用） |
+| `TodayMasteryCard` | 今日の復習セッション定着率（評価結果ベース。プログレスバー + 内訳表示） |
 | `MarkdownPreview` | Markdown テキストを HTML にレンダリング。コードブロックのシンタックスハイライト付き |
 | `CardImage` | IndexedDB から画像 Blob を取得して Blob URL で表示 |
 
@@ -197,7 +208,27 @@ memory-app/
 - ローカル完結型 MVP のため、外部DBサーバーが不要な SQLite を採用
 - Prisma のマイグレーション機能と型安全なクエリの恩恵を受けつつ、セットアップの手軽さを両立
 
-### 4-6. 復習画面は AppLayout を使わない
+### 4-6. 自由学習モードと SRS の分離
+
+**判断:** 自由学習の評価結果は SRS パラメータに反映しない
+
+**理由:**
+- SRS（忘却曲線ベース）の効果は「適切なタイミングでの復習」に依存する
+- 自由学習で「簡単」を連打すると `intervalDays` が急上昇し、本来の復習スケジュールが崩れる
+- 自由学習はあくまで「いつでも練習できる」機能であり、SRS とは独立した学習体験として設計
+
+**実装:** 復習画面（`app/review/page.tsx`）が `mode=free` クエリパラメータで動作を切り替える。自由学習時は `applyReview`（SRS 更新）を呼ばず、`recordFreeStudy`（カウントのみ）を呼ぶ。
+
+### 4-7. 定着率の二重表示（全体定着度 + セッション定着率）
+
+**判断:** 既存の intervalDays ベースの定着度チャートと、復習セッションの評価結果ベースの定着率を並列表示
+
+**理由:**
+- intervalDays ベース（`MasteryChart`）は長期的な学習進捗を示す指標
+- セッション定着率（`TodayMasteryCard`）は今日の復習パフォーマンスを示す即時フィードバック
+- 両方あることで「長期の成長」と「今日の調子」の両面でモチベーションを維持できる
+
+### 4-8. 復習画面は AppLayout を使わない
 
 **判断:** 復習画面（`/review`）は `AppLayout`（ヘッダー+コンテナ）を使わず、全画面レイアウト
 
@@ -325,6 +356,7 @@ API 呼び出しが失敗した場合、`throw new Error(...)` するだけで�
 | `components/review/CardImage.tsx` | IndexedDB から画像を取得して表示するだけ |
 | `components/dashboard/StudySummaryCard.tsx` | 表示のみのカードコンポーネント |
 | `components/dashboard/TodayReviewCard.tsx` | 表示のみのカードコンポーネント |
+| `components/dashboard/TodayMasteryCard.tsx` | 表示のみのカードコンポーネント（復習セッション定着率） |
 | `app/api/decks/route.ts` | 単純な CRUD |
 | `app/api/decks/[id]/route.ts` | 単純な CRUD |
 | `app/api/cards/route.ts` | 単純な CRUD |
@@ -406,3 +438,4 @@ npm run dev
 | 日付 | 変更内容 |
 |------|---------|
 | 2026-02-09 | 初版作成 |
+| 2026-02-09 | 自由学習モード・定着率改善の設計判断・フロー・コンポーネント情報を追加 |

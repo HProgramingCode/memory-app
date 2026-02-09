@@ -35,6 +35,10 @@ export async function GET() {
   const serializedRecords = studyRecords.map((r) => ({
     date: r.date,
     reviewedCount: r.reviewedCount,
+    freeStudyCount: r.freeStudyCount,
+    againCount: r.againCount,
+    hardCount: r.hardCount,
+    goodCount: r.goodCount,
   }));
 
   return NextResponse.json({

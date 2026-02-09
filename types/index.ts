@@ -41,8 +41,16 @@ export type ReviewRating = "again" | "hard" | "good";
 export interface StudyRecord {
   /** 日付 (YYYY-MM-DD) */
   date: string;
-  /** その日に復習したカード数 */
+  /** その日に復習したカード数（今日の復習） */
   reviewedCount: number;
+  /** その日の自由学習カード数 */
+  freeStudyCount: number;
+  /** 今日の復習での「難しい」評価数 */
+  againCount: number;
+  /** 今日の復習での「普通」評価数 */
+  hardCount: number;
+  /** 今日の復習での「簡単」評価数 */
+  goodCount: number;
 }
 
 /** エクスポート用データ構造 */

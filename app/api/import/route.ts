@@ -56,6 +56,10 @@ export async function POST(request: Request) {
         data: {
           date: record.date,
           reviewedCount: record.reviewedCount,
+          freeStudyCount: record.freeStudyCount ?? 0,
+          againCount: record.againCount ?? 0,
+          hardCount: record.hardCount ?? 0,
+          goodCount: record.goodCount ?? 0,
         },
       });
     }

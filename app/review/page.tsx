@@ -35,11 +35,15 @@ function ReviewContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const deckId = searchParams.get("deckId");
+  const mode = searchParams.get("mode"); // "free" なら自由学習モード
+  const isFreeMode = mode === "free";
 
   const getDueCards = useCardStore((s) => s.getDueCards);
   const getDueCardsByDeckId = useCardStore((s) => s.getDueCardsByDeckId);
+  const getCardsByDeckId = useCardStore((s) => s.getCardsByDeckId);
   const applyReview = useCardStore((s) => s.applyReview);
   const recordReview = useStudyStore((s) => s.recordReview);
+  const recordFreeStudy = useStudyStore((s) => s.recordFreeStudy);
 
   // 復習対象カードをシャッフルして保持
   const [reviewCards, setReviewCards] = useState<CardType[]>([]);
@@ -50,9 +54,17 @@ function ReviewContent() {
 
   // 初回マウント時にカードをシャッフルして取得
   useEffect(() => {
-    const due = deckId ? getDueCardsByDeckId(deckId) : getDueCards();
+    let cards: CardType[];
+    if (isFreeMode && deckId) {
+      // 自由学習: デッキ内の全カードが対象
+      cards = getCardsByDeckId(deckId);
+    } else if (deckId) {
+      cards = getDueCardsByDeckId(deckId);
+    } else {
+      cards = getDueCards();
+    }
     // Fisher-Yates シャッフル
-    const shuffled = [...due];
+    const shuffled = [...cards];
     for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
@@ -71,9 +83,14 @@ function ReviewContent() {
     async (rating: ReviewRating) => {
       if (!currentCard) return;
 
-      // SRS更新 + 学習記録
-      await applyReview(currentCard.id, rating);
-      await recordReview();
+      if (isFreeMode) {
+        // 自由学習: SRS更新なし、カウントのみ
+        await recordFreeStudy();
+      } else {
+        // 今日の復習: SRS更新 + rating付き学習記録
+        await applyReview(currentCard.id, rating);
+        await recordReview(rating);
+      }
 
       // 次のカードへ遷移
       setFadeIn(false);
@@ -87,7 +104,7 @@ function ReviewContent() {
         setFadeIn(true);
       }, 200);
     },
-    [currentCard, currentIndex, total, applyReview, recordReview]
+    [currentCard, currentIndex, total, isFreeMode, applyReview, recordReview, recordFreeStudy]
   );
 
   // セッション完了画面
@@ -108,11 +125,13 @@ function ReviewContent() {
           🎉
         </Typography>
         <Typography variant="h5" gutterBottom>
-          復習完了！
+          {isFreeMode ? "学習完了！" : "復習完了！"}
         </Typography>
         <Typography color="text.secondary" sx={{ mb: 3 }}>
           {total > 0
-            ? `${total} 枚のカードを復習しました`
+            ? `${total} 枚のカードを${isFreeMode ? "学習" : "復習"}しました`
+            : isFreeMode
+            ? "このデッキにカードがありません"
             : "今日の復習はありません"}
         </Typography>
         <Button variant="contained" onClick={() => router.push("/")}>
@@ -144,6 +163,7 @@ function ReviewContent() {
           }}
         >
           <Typography variant="body2" color="text.secondary">
+            {isFreeMode && "自由学習 — "}
             {currentIndex + 1} / {total}
           </Typography>
           <IconButton size="small" onClick={() => router.push("/")}>
