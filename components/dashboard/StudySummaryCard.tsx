@@ -12,67 +12,90 @@ interface StudySummaryCardProps {
 }
 
 /**
- * 学習サマリーセクション
+ * 学習サマリー — 横並びスタッツ
+ * 3つの数値を同じ行に等幅で配置
  */
 export default function StudySummaryCard({
   totalCards,
   streak,
   todayStudyCount,
 }: StudySummaryCardProps) {
+  const stats = [
+    {
+      label: "総カード数",
+      value: totalCards,
+      unit: "枚",
+      icon: <StyleIcon sx={{ fontSize: 20, color: "#6366f1" }} />,
+      bgColor: "rgba(99, 102, 241, 0.08)",
+    },
+    {
+      label: "今日の学習",
+      value: todayStudyCount,
+      unit: "枚",
+      icon: <MenuBookIcon sx={{ fontSize: 20, color: "#8b5cf6" }} />,
+      bgColor: "rgba(139, 92, 246, 0.08)",
+    },
+    {
+      label: "連続学習",
+      value: streak,
+      unit: `日${streak >= 3 ? " 🔥" : ""}`,
+      icon: (
+        <LocalFireDepartmentIcon
+          sx={{
+            fontSize: 20,
+            color: streak > 0 ? "#f59e0b" : "#d1d5db",
+            ...(streak >= 3 ? { animation: "pulseGlow 2s ease-in-out infinite" } : {}),
+          }}
+        />
+      ),
+      bgColor: streak > 0 ? "rgba(245, 158, 11, 0.08)" : "rgba(0,0,0,0.02)",
+    },
+  ];
+
   return (
-    <Card
-      sx={{
-        height: "100%",
-        borderRadius: 4,
-        boxShadow: "0 4px 20px 0 rgba(0,0,0,0.05)",
-        border: "1px solid",
-        borderColor: "divider",
-      }}
-    >
-      <CardContent sx={{ p: 3 }}>
-        <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 600, mb: 2 }}>
-          学習サマリー
-        </Typography>
-        <Stack spacing={2.5}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <Box sx={{ p: 1, borderRadius: 2, bgcolor: "primary.lighter", display: "flex" }}>
-              <StyleIcon color="primary" />
-            </Box>
-            <Box>
-              <Typography variant="caption" color="text.secondary" display="block">
-                総カード数
-              </Typography>
-              <Typography variant="h6" sx={{ fontWeight: 700 }}>{totalCards} <Typography component="span" variant="body2" color="text.secondary">枚</Typography></Typography>
-            </Box>
-          </Box>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <Box sx={{ p: 1, borderRadius: 2, bgcolor: "secondary.lighter", display: "flex" }}>
-              <MenuBookIcon color="secondary" />
-            </Box>
-            <Box>
-              <Typography variant="caption" color="text.secondary" display="block">
-                今日の学習
-              </Typography>
-              <Typography variant="h6" sx={{ fontWeight: 700 }}>{todayStudyCount} <Typography component="span" variant="body2" color="text.secondary">枚</Typography></Typography>
-            </Box>
-          </Box>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <Box sx={{ p: 1, borderRadius: 2, bgcolor: streak > 0 ? "warning.lighter" : "action.hover", display: "flex" }}>
-              <LocalFireDepartmentIcon
-                sx={{ color: streak > 0 ? "#FF6D00" : "text.disabled" }}
-              />
-            </Box>
-            <Box>
-              <Typography variant="caption" color="text.secondary" display="block">
-                連続学習
-              </Typography>
-              <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                {streak} 日{streak >= 3 && " 🔥"}
+    <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+      {stats.map((stat, i) => (
+        <Card
+          key={stat.label}
+          sx={{
+            flex: 1,
+            animation: `fadeInUp 0.4s ease-out ${0.1 + i * 0.08}s both`,
+          }}
+        >
+          <CardContent sx={{ p: 2.5, "&:last-child": { pb: 2.5 } }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 1 }}>
+              <Box
+                sx={{
+                  p: 0.75,
+                  borderRadius: 2,
+                  bgcolor: stat.bgColor,
+                  display: "flex",
+                }}
+              >
+                {stat.icon}
+              </Box>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ fontWeight: 600, fontSize: "0.68rem", letterSpacing: "0.03em" }}
+              >
+                {stat.label}
               </Typography>
             </Box>
-          </Box>
-        </Stack>
-      </CardContent>
-    </Card>
+            <Typography variant="h5" sx={{ fontWeight: 800, color: "text.primary", lineHeight: 1 }}>
+              {stat.value}
+              <Typography
+                component="span"
+                variant="body2"
+                color="text.secondary"
+                sx={{ fontWeight: 500, ml: 0.5 }}
+              >
+                {stat.unit}
+              </Typography>
+            </Typography>
+          </CardContent>
+        </Card>
+      ))}
+    </Stack>
   );
 }

@@ -10,6 +10,15 @@ import StudySummaryCard from "@/components/dashboard/StudySummaryCard";
 import MasteryChart from "@/components/dashboard/MasteryChart";
 import { Grid, Divider, Typography, Box, Stack } from "@mui/material";
 
+/**
+ * ダッシュボード
+ *
+ * レイアウト優先順位:
+ * 1. Hero CTA — 今日の復習（最重要アクション）
+ * 2. Stats Row — 3つの数値を横並びで俯瞰
+ * 3. Charts — 定着度 + 学習推移をグリッドで
+ * 4. Deck List — コンテンツ管理
+ */
 export default function DashboardPage() {
   const { cards, getDueCards } = useCardStore();
   const { getStreak, getTodayRecord } = useStudyStore();
@@ -21,50 +30,37 @@ export default function DashboardPage() {
 
   return (
     <AppLayout>
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" component="h1" sx={{ fontWeight: 700, color: "text.primary" }}>
-          ダッシュボード
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          今日の学習状況を確認しましょう
-        </Typography>
-      </Box>
+      <Stack spacing={3}>
+        {/* ① Hero CTA — 最初に「今日やること」 */}
+        <Box sx={{ animation: "fadeInUp 0.3s ease-out" }}>
+          <TodayReviewCard dueCount={dueCards.length} />
+        </Box>
 
-      {/* メイングリッドエリア */}
-      <Grid container spacing={3}>
-        {/* 左カラム: アクション & サマリー */}
-        <Grid item xs={12} lg={4}>
-          <Stack spacing={3}>
-            <TodayReviewCard dueCount={dueCards.length} />
-            <StudySummaryCard
-              totalCards={cards.length}
-              streak={streak}
-              todayStudyCount={todayStudyCount}
-            />
-          </Stack>
-        </Grid>
+        {/* ② Stats Row — 俯瞰的サマリー */}
+        <Box sx={{ animation: "fadeInUp 0.3s ease-out 0.1s both" }}>
+          <StudySummaryCard
+            totalCards={cards.length}
+            streak={streak}
+            todayStudyCount={todayStudyCount}
+          />
+        </Box>
 
-        {/* 右カラム: 統計・グラフエリア */}
-        <Grid item xs={12} lg={8}>
-          <Grid container spacing={3}>
-            {/* 定着度（ドーナツグラフ） */}
-            <Grid item xs={12} md={5}>
-              <MasteryChart cards={cards} />
-            </Grid>
-            {/* 学習履歴（棒グラフ） */}
-            <Grid item xs={12} md={7}>
-              <DailyStudyChart />
-            </Grid>
-            {/* デッキ一覧をグラフの下に配置 */}
-            <Grid item xs={12}>
-              <Divider sx={{ my: 1 }} />
-              <Box sx={{ mt: 2 }}>
-                <DeckList />
-              </Box>
-            </Grid>
+        {/* ③ Charts — 定着度 + 学習推移 */}
+        <Grid container spacing={3} sx={{ animation: "fadeInUp 0.3s ease-out 0.2s both" }}>
+          <Grid item xs={12} md={5}>
+            <MasteryChart cards={cards} />
+          </Grid>
+          <Grid item xs={12} md={7}>
+            <DailyStudyChart />
           </Grid>
         </Grid>
-      </Grid>
+
+        {/* ④ Deck List — コンテンツ管理 */}
+        <Divider sx={{ my: 0.5 }} />
+        <Box sx={{ animation: "fadeInUp 0.3s ease-out 0.3s both" }}>
+          <DeckList />
+        </Box>
+      </Stack>
     </AppLayout>
   );
 }

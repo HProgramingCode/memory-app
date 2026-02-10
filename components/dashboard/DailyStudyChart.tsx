@@ -9,16 +9,14 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Cell,
 } from "recharts";
-import { Paper, Typography, Box, useTheme, Card } from "@mui/material";
+import { Typography, Box, useTheme, Card } from "@mui/material";
 import { useStudyStore } from "@/stores/useStudyStore";
-import { format, subDays, eachDayOfInterval, isSameDay } from "date-fns";
+import { format, subDays, eachDayOfInterval } from "date-fns";
 import { ja } from "date-fns/locale";
 
 /**
- * 日別の学習枚数グラフ
- * 直近7日間の学習枚数を棒グラフで表示
+ * 日別の学習枚数グラフ — ライトモード + グラデーションバー
  */
 export default function DailyStudyChart() {
   const theme = useTheme();
@@ -26,14 +24,11 @@ export default function DailyStudyChart() {
 
   const data = useMemo(() => {
     const today = new Date();
-    const startDate = subDays(today, 6); // 過去7日間（今日含む）
-
-    // 日付の配列を作成
+    const startDate = subDays(today, 6);
     const dates = eachDayOfInterval({ start: startDate, end: today });
 
     return dates.map((date) => {
-      const dateStr = format(date, "yyyy-MM-dd"); // Format current date for comparison
-      // その日のレコードを検索
+      const dateStr = format(date, "yyyy-MM-dd");
       const dayRecord = records.find((r) => r.date === dateStr);
       const count = dayRecord ? (dayRecord.reviewedCount + (dayRecord.freeStudyCount || 0)) : 0;
       return {
@@ -45,17 +40,8 @@ export default function DailyStudyChart() {
   }, [records]);
 
   return (
-    <Card
-      sx={{
-        p: 3,
-        height: "100%",
-        borderRadius: 4,
-        boxShadow: "0 4px 20px 0 rgba(0,0,0,0.05)",
-        border: "1px solid",
-        borderColor: "divider",
-      }}
-    >
-      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 3 }} color="text.secondary">
+    <Card sx={{ p: 3, height: "100%" }}>
+      <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 3 }}>
         直近7日間の学習枚数
       </Typography>
       <Box sx={{ width: "100%", height: 250 }}>
@@ -64,7 +50,17 @@ export default function DailyStudyChart() {
             data={data}
             margin={{ top: 10, right: 10, left: -25, bottom: 0 }}
           >
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme.palette.divider} />
+            <defs>
+              <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#6366f1" />
+                <stop offset="100%" stopColor="#818cf8" stopOpacity={0.7} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid
+              strokeDasharray="3 3"
+              vertical={false}
+              stroke="rgba(0,0,0,0.04)"
+            />
             <XAxis
               dataKey="date"
               tick={{ fontSize: 11, fill: theme.palette.text.secondary, fontWeight: 500 }}
@@ -79,16 +75,20 @@ export default function DailyStudyChart() {
               allowDecimals={false}
             />
             <Tooltip
-              cursor={{ fill: "rgba(0,0,0,0.04)", radius: 4 }}
+              cursor={{ fill: "rgba(99, 102, 241, 0.04)", radius: 4 }}
               contentStyle={{
-                backgroundColor: theme.palette.background.paper,
-                border: `1px solid ${theme.palette.divider}`,
-                borderRadius: 8,
-                boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-                padding: "8px 12px",
+                backgroundColor: "#fff",
+                border: "1px solid rgba(0,0,0,0.08)",
+                borderRadius: 12,
+                boxShadow: "0 8px 24px rgba(0,0,0,0.1)",
+                padding: "10px 14px",
               }}
-              labelStyle={{ color: theme.palette.text.primary, fontWeight: 700, marginBottom: 4 }}
-              itemStyle={{ padding: 0 }}
+              labelStyle={{
+                color: theme.palette.text.primary,
+                fontWeight: 700,
+                marginBottom: 4,
+              }}
+              itemStyle={{ padding: 0, color: theme.palette.text.secondary }}
               formatter={(value: number | undefined) => [`${value ?? 0} 枚`, "学習枚数"]}
               labelFormatter={(label, payload) => {
                 if (payload && payload.length > 0) {
@@ -97,14 +97,12 @@ export default function DailyStudyChart() {
                 return label;
               }}
             />
-            <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={32}>
-              {data.map((entry, index) => (
-                <Cell
-                  key={`cell-${index}`}
-                  fill={theme.palette.primary.main}
-                />
-              ))}
-            </Bar>
+            <Bar
+              dataKey="count"
+              fill="url(#barGradient)"
+              radius={[6, 6, 0, 0]}
+              maxBarSize={32}
+            />
           </BarChart>
         </ResponsiveContainer>
       </Box>
