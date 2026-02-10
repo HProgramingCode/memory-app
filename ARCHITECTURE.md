@@ -1,6 +1,6 @@
 # Memory App - 保守・引き継ぎドキュメント
 
-> **最終更新:** 2026-02-09
+> **最終更新:** 2026-02-10
 >
 > このドキュメントは、Memory App のソースコードを保守・改修する人間が「コードを読む前に全体を理解する」ためのものです。
 > コードの逐語的な説明ではなく、**設計意図・判断の理由・注意すべき箇所**に焦点を当てています。
@@ -21,7 +21,7 @@
 
 ### 現在のフェーズ
 
-Phase 1「ローカル完結型 MVP」。認証機能やクラウド同期はなく、単一ユーザーがローカルで使う前提。
+Phase 1.5「認証機能追加」。NextAuth.js と Google OAuth による認証が実装済み。データはユーザーごとに管理される。クラウド同期（Turso）は未実装。
 
 ---
 
@@ -94,15 +94,20 @@ memory-app/
 │   ├── layout.tsx          # 全ページ共通レイアウト（テーマ・データ初期化）
 │   ├── page.tsx            # ダッシュボード（トップページ）
 │   ├── globals.css         # 最小限のグローバルCSS
+│   ├── error.tsx           # エラーバウンダリ（クライアント側エラー）
+│   ├── global-error.tsx    # グローバルエラーハンドリング
+│   ├── login/page.tsx      # ログイン画面
 │   ├── review/page.tsx     # 復習セッション画面
 │   ├── settings/page.tsx   # 設定画面（エクスポート/インポート）
 │   ├── decks/[id]/page.tsx # デッキ詳細（カード一覧）
 │   ├── cards/new/page.tsx  # カード新規登録
 │   ├── cards/[id]/edit/    # カード編集
 │   └── api/                # REST API エンドポイント（後述）
+│       └── auth/[...nextauth]/ # NextAuth.js 認証エンドポイント
 │
 ├── components/             # UIコンポーネント
-│   ├── common/             # 共通部品（レイアウト、ダイアログ等）
+│   ├── auth/               # 認証関連（LoginButton）
+│   ├── common/             # 共通部品（レイアウト、ダイアログ、ToastProvider等）
 │   ├── dashboard/          # ダッシュボード専用コンポーネント
 │   ├── card/               # カード登録/編集フォーム
 │   └── review/             # 復習画面用（画像表示）
@@ -119,15 +124,20 @@ memory-app/
 │   ├── useDeckStore.ts     # デッキのCRUD
 │   └── useStudyStore.ts    # 学習記録・ストリーク計算
 │
+├── auth.ts                 # NextAuth.js 設定（PrismaAdapter + JWT）
+├── auth.config.ts          # NextAuth.js プロバイダー設定（Google OAuth）
+├── middleware.ts           # 認証ミドルウェア（未ログイン時リダイレクト）
 ├── types/index.ts          # 型定義（Deck, Card, StudyRecord 等）
-├── prisma/schema.prisma    # DBスキーマ定義
-└── prisma.config.ts        # Prisma設定
+├── prisma/schema.prisma    # DBスキーマ定義（User, Account, Session モデル含む）
+├── prisma/seed.ts          # ダミーデータ生成スクリプト
+└── prisma.config.ts        # Prisma設定（seedコマンド含む）
 ```
 
 ### API エンドポイント一覧
 
 | パス | メソッド | 役割 |
 |------|----------|------|
+| `/api/auth/[...nextauth]` | GET / POST | NextAuth.js 認証（Google OAuth） |
 | `/api/decks` | GET / POST | デッキ一覧取得・作成 |
 | `/api/decks/[id]` | GET / PUT / DELETE | デッキ個別操作 |
 | `/api/cards` | GET / POST | カード一覧取得・作成 |
@@ -135,7 +145,7 @@ memory-app/
 | `/api/cards/[id]/review` | POST | 復習結果の反映（SRS計算） |
 | `/api/study-records` | GET / POST | 学習記録の取得・復習/自由学習1件記録（rating + mode 対応） |
 | `/api/export` | GET | 全データJSON取得 |
-| `/api/import` | POST | 全データJSON置換 |
+| `/api/import` | POST | 全データJSON置換（認証必須） |
 
 ### 主要コンポーネントの責務
 
@@ -147,7 +157,9 @@ memory-app/
 | `CardForm` | カードの登録・編集フォーム。Markdown エディタ + プレビュー + 画像アップロード |
 | `DeckList` | デッキ一覧の表示・作成・名前変更・削除（コンテキストメニュー付き）+ 自由学習ボタン + デッキ別定着率 |
 | `MasteryChart` | 全体定着度のドーナツチャート（SVG描画。intervalDays ベース。外部チャートライブラリ不使用） |
-| `TodayMasteryCard` | 今日の復習セッション定着率（評価結果ベース。プログレスバー + 内訳表示） |
+| `DailyStudyChart` | 直近7日間の学習枚数を棒グラフで表示（recharts 使用） |
+| `LoginButton` | Google OAuth ログインボタン |
+| `ToastProvider` | react-hot-toast によるトースト通知プロバイダー |
 | `MarkdownPreview` | Markdown テキストを HTML にレンダリング。コードブロックのシンタックスハイライト付き |
 | `CardImage` | IndexedDB から画像 Blob を取得して Blob URL で表示 |
 
@@ -254,7 +266,7 @@ memory-app/
 3. **画像の参照は ID ベース:** カードの `frontImageId` / `backImageId` は IndexedDB 内のキー。DB には画像の実体は保存されない
 4. **削除は物理削除:** デッキ削除時はカードも連鎖削除（Prisma の `onDelete: Cascade`）。ゴミ箱機能はない
 5. **インポートは完全置換:** 増分マージではなく、既存データを全削除して新規挿入する
-6. **認証なし:** 全データが全ユーザーに公開される前提（Phase 1）
+6. **認証必須:** NextAuth.js + Google OAuth で認証。未ログイン時は `/login` にリダイレクトされる
 
 ### 依存関係のバージョン制約
 
@@ -356,7 +368,7 @@ API 呼び出しが失敗した場合、`throw new Error(...)` するだけで�
 | `components/review/CardImage.tsx` | IndexedDB から画像を取得して表示するだけ |
 | `components/dashboard/StudySummaryCard.tsx` | 表示のみのカードコンポーネント |
 | `components/dashboard/TodayReviewCard.tsx` | 表示のみのカードコンポーネント |
-| `components/dashboard/TodayMasteryCard.tsx` | 表示のみのカードコンポーネント（復習セッション定着率） |
+| `components/dashboard/DailyStudyChart.tsx` | 表示のみのチャートコンポーネント（recharts 使用） |
 | `app/api/decks/route.ts` | 単純な CRUD |
 | `app/api/decks/[id]/route.ts` | 単純な CRUD |
 | `app/api/cards/route.ts` | 単純な CRUD |
@@ -439,3 +451,4 @@ npm run dev
 |------|---------|
 | 2026-02-09 | 初版作成 |
 | 2026-02-09 | 自由学習モード・定着率改善の設計判断・フロー・コンポーネント情報を追加 |
+| 2026-02-10 | 認証機能（NextAuth.js + Google OAuth）追加。ダッシュボードUI刷新（DailyStudyChart追加、TodayMasteryCard削除）。エラーハンドリングページ、ログインページ、シードスクリプト追加 |

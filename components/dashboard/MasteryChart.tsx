@@ -9,8 +9,7 @@ interface MasteryChartProps {
 }
 
 /**
- * 定着度グラフ（シンプルなドーナツ風の円グラフ）
- * 外部ライブラリを使わず、CSS + SVG で実装
+ * 定着度グラフ — ドーナツチャート（ライトモード対応）
  */
 export default function MasteryChart({ cards }: MasteryChartProps) {
   const total = cards.length;
@@ -18,30 +17,21 @@ export default function MasteryChart({ cards }: MasteryChartProps) {
   const learning = total - mastered;
   const masteredPct = total > 0 ? (mastered / total) * 100 : 0;
 
-  // SVG 円グラフ用の計算
-  const radius = 50;
+  const radius = 48;
   const circumference = 2 * Math.PI * radius;
   const masteredArc = (masteredPct / 100) * circumference;
 
   return (
-    <Card
-      sx={{
-        height: "100%",
-        borderRadius: 4,
-        boxShadow: "0 4px 20px 0 rgba(0,0,0,0.05)",
-        border: "1px solid",
-        borderColor: "divider",
-      }}
-    >
+    <Card sx={{ height: "100%" }}>
       <CardContent sx={{ p: 3, display: "flex", flexDirection: "column", height: "100%" }}>
-        <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 600, mb: 1 }}>
+        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
           カードの定着度
         </Typography>
 
         {total === 0 ? (
           <Box sx={{ flexGrow: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <Typography variant="body2" color="text.secondary">
-              カードを登録しましょう
+              カードを追加して学習を始めましょう ✨
             </Typography>
           </Box>
         ) : (
@@ -56,34 +46,37 @@ export default function MasteryChart({ cards }: MasteryChartProps) {
               mt: 1,
             }}
           >
-            {/* SVG ドーナツチャート */}
-            <Box sx={{ position: "relative", width: 140, height: 140 }}>
+            <Box sx={{ position: "relative", width: 130, height: 130 }}>
               <svg
-                width="140"
-                height="140"
-                viewBox="0 0 140 140"
+                width="130"
+                height="130"
+                viewBox="0 0 130 130"
                 style={{ transform: "rotate(-90deg)" }}
               >
-                {/* 背景円 */}
+                <defs>
+                  <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#10b981" />
+                    <stop offset="100%" stopColor="#34d399" />
+                  </linearGradient>
+                </defs>
                 <circle
-                  cx="70"
-                  cy="70"
+                  cx="65"
+                  cy="65"
                   r={radius}
                   fill="none"
-                  stroke="rgba(0,0,0,0.04)"
-                  strokeWidth="12"
+                  stroke="#f1f5f9"
+                  strokeWidth="10"
                 />
-                {/* 定着済み部分 */}
                 <circle
-                  cx="70"
-                  cy="70"
+                  cx="65"
+                  cy="65"
                   r={radius}
                   fill="none"
-                  stroke="#4CAF50"
-                  strokeWidth="12"
+                  stroke="url(#ringGradient)"
+                  strokeWidth="10"
                   strokeDasharray={`${masteredArc} ${circumference - masteredArc}`}
                   strokeLinecap="round"
-                  style={{ transition: "stroke-dasharray 0.5s ease" }}
+                  style={{ transition: "stroke-dasharray 0.8s cubic-bezier(0.4, 0, 0.2, 1)" }}
                 />
               </svg>
               <Box
@@ -95,29 +88,37 @@ export default function MasteryChart({ cards }: MasteryChartProps) {
                   textAlign: "center",
                 }}
               >
-                <Typography variant="h5" sx={{ fontWeight: 800, color: "text.primary" }}>
+                <Typography
+                  variant="h5"
+                  sx={{ fontWeight: 900, color: "#10b981", lineHeight: 1 }}
+                >
                   {Math.round(masteredPct)}%
                 </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Mastered
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.6rem" }}>
+                  定着済み
                 </Typography>
               </Box>
             </Box>
 
-            {/* 凡例 */}
-            <Box sx={{ width: "100%", mt: 1 }}>
-              <Stack direction="row" justifyContent="space-around" spacing={2}>
-                <Box sx={{ textAlign: "center" }}>
-                  <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1 }}>{mastered}</Typography>
-                  <Typography variant="caption" color="text.secondary">定着済み</Typography>
-                </Box>
-                <Divider orientation="vertical" flexItem sx={{ opacity: 0.6 }} />
-                <Box sx={{ textAlign: "center" }}>
-                  <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1 }}>{learning}</Typography>
-                  <Typography variant="caption" color="text.secondary">学習中</Typography>
-                </Box>
-              </Stack>
-            </Box>
+            <Stack direction="row" spacing={4} sx={{ mt: 0.5 }}>
+              <Box sx={{ textAlign: "center" }}>
+                <Typography variant="h6" sx={{ fontWeight: 800, lineHeight: 1, color: "#10b981" }}>
+                  {mastered}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.6rem" }}>
+                  定着済み
+                </Typography>
+              </Box>
+              <Divider orientation="vertical" flexItem />
+              <Box sx={{ textAlign: "center" }}>
+                <Typography variant="h6" sx={{ fontWeight: 800, lineHeight: 1, color: "text.secondary" }}>
+                  {learning}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.6rem" }}>
+                  学習中
+                </Typography>
+              </Box>
+            </Stack>
           </Box>
         )}
       </CardContent>
