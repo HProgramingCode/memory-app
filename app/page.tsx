@@ -8,7 +8,7 @@ import DailyStudyChart from "@/components/dashboard/DailyStudyChart";
 import TodayReviewCard from "@/components/dashboard/TodayReviewCard";
 import StudySummaryCard from "@/components/dashboard/StudySummaryCard";
 import MasteryChart from "@/components/dashboard/MasteryChart";
-import { Grid, Divider, Typography, Box, Stack } from "@mui/material";
+import { Divider, Typography, Box, Stack } from "@mui/material";
 
 /**
  * ダッシュボード
@@ -46,14 +46,21 @@ export default function DashboardPage() {
         </Box>
 
         {/* ③ Charts — 定着度 + 学習推移 */}
-        <Grid container spacing={3} sx={{ animation: "fadeInUp 0.3s ease-out 0.2s both" }}>
-          <Grid item xs={12} md={5}>
+        <Box
+          sx={{
+            display: "flex",
+            gap: 3,
+            flexDirection: { xs: "column", md: "row" },
+            animation: "fadeInUp 0.3s ease-out 0.2s both",
+          }}
+        >
+          <Box sx={{ flex: { xs: "1 1 auto", md: "0 0 calc(41.66% - 12px)" } }}>
             <MasteryChart cards={cards} />
-          </Grid>
-          <Grid item xs={12} md={7}>
+          </Box>
+          <Box sx={{ flex: { xs: "1 1 auto", md: "1 1 0" } }}>
             <DailyStudyChart />
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
 
         {/* ④ Deck List — コンテンツ管理 */}
         <Divider sx={{ my: 0.5 }} />

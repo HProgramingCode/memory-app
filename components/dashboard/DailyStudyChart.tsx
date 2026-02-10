@@ -45,7 +45,7 @@ export default function DailyStudyChart() {
         直近7日間の学習枚数
       </Typography>
       <Box sx={{ width: "100%", height: 250 }}>
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
           <BarChart
             data={data}
             margin={{ top: 10, right: 10, left: -25, bottom: 0 }}
