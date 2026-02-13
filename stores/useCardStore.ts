@@ -9,7 +9,7 @@ interface CardState {
   initialized: boolean;
 
   /** API からカード一覧を取得してストアを初期化 */
-  fetchCards: () => Promise<void>;
+  setCards: (cards: Card[]) => void;
 
   addCard: (params: {
     deckId: string;
@@ -54,12 +54,7 @@ export const useCardStore = create<CardState>()((set, get) => ({
   cards: [],
   initialized: false,
 
-  fetchCards: async () => {
-    const res = await fetch("/api/cards");
-    if (!res.ok) throw new Error("Failed to fetch cards");
-    const cards: Card[] = await res.json();
-    set({ cards, initialized: true });
-  },
+  setCards: (cards) => set({ cards, initialized: true }),
 
   addCard: async (params) => {
     try {

@@ -452,3 +452,4 @@ npm run dev
 | 2026-02-09 | 初版作成 |
 | 2026-02-09 | 自由学習モード・定着率改善の設計判断・フロー・コンポーネント情報を追加 |
 | 2026-02-10 | 認証機能（NextAuth.js + Google OAuth）追加。ダッシュボードUI刷新（DailyStudyChart追加、TodayMasteryCard削除）。エラーハンドリングページ、ログインページ、シードスクリプト追加 |
+| 2026-02-13 | 責務分離 一覧取得をSSRに修正進捗30% 対応具体内容:CSRからFetchしていた一覧取得をServer Componentで取得するように変更。Cards取得のみ修正　残: useDeckの取得、useStudyRecordsの取得 |
