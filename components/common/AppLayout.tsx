@@ -10,6 +10,7 @@ import {
 } from "@mui/material";
 import SettingsIcon from "@mui/icons-material/Settings";
 import { useRouter } from "next/navigation";
+import LogoutButton from "../auth/LogoutButton";
 
 /**
  * 共通レイアウト（フロストヘッダー + クリーン背景）
@@ -34,6 +35,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           >
             Memory App
           </Typography>
+          <LogoutButton />
           <IconButton
             sx={{
               color: "text.secondary",

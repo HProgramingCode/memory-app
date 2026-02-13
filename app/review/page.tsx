@@ -57,9 +57,10 @@ function ReviewContent() {
   const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
-    if (!deckId) return;
     let cards: CardType[] = [];
     if (isFreeMode) {
+      // 自由学習は deckId 必須
+      if (!deckId) { setIsCompleted(true); return; }
       cards = getCardsByDeckId(deckId);
       const lastIndex = getLastStudyIndex(deckId);
       if (lastIndex > 0 && lastIndex < cards.length) {
@@ -68,13 +69,14 @@ function ReviewContent() {
         return;
       }
     } else {
-      cards = getDueCardsByDeckId(deckId);
+      // 通常復習: deckId があればそのデッキ、なければ全デッキの due cards
+      cards = deckId ? getDueCardsByDeckId(deckId) : getDueCards();
       if (cards.length === 0) { setIsCompleted(true); return; }
     }
-    if (!isFreeMode || (isFreeMode && getLastStudyIndex(deckId) === 0)) {
+    if (!isFreeMode || (isFreeMode && deckId && getLastStudyIndex(deckId) === 0)) {
       startSession(cards, 0, true);
     }
-  }, [deckId, isFreeMode, getCardsByDeckId, getDueCardsByDeckId, getLastStudyIndex]);
+  }, [deckId, isFreeMode, getCardsByDeckId, getDueCardsByDeckId, getDueCards, getLastStudyIndex]);
 
   const startSession = (cards: CardType[], startIndex: number, shuffle: boolean) => {
     let targetCards = [...cards];
