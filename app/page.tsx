@@ -8,7 +8,7 @@ import DailyStudyChart from "@/components/dashboard/DailyStudyChart";
 import TodayReviewCard from "@/components/dashboard/TodayReviewCard";
 import StudySummaryCard from "@/components/dashboard/StudySummaryCard";
 import MasteryChart from "@/components/dashboard/MasteryChart";
-import { Divider, Typography, Box, Stack } from "@mui/material";
+import { Divider, Box, Stack } from "@mui/material";
 
 /**
  * ダッシュボード
