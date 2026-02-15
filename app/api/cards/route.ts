@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { getCards, createCard } from "@/lib/cards";
+import { getCards } from "@/features/cards/repository";
+import { createCard } from "@/features/cards/actions";
 
 /** GET /api/cards - 全カード取得（deckId でフィルタ可能） */
 export async function GET(request: Request) {

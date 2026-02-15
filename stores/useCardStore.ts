@@ -54,7 +54,7 @@ export const useCardStore = create<CardState>()((set, get) => ({
   cards: [],
   initialized: false,
 
-  setCards: (cards) => set({ cards, initialized: true }),
+  setCards: (cards: Card[]) => set({ cards, initialized: true }),
 
   addCard: async (params) => {
     try {
