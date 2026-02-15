@@ -7,7 +7,7 @@ interface DeckState {
   initialized: boolean;
 
   /** API からデッキ一覧を取得してストアを初期化 */
-  fetchDecks: () => Promise<void>;
+  setDecks: (decks: Deck[]) => void;
   addDeck: (name: string) => Promise<Deck>;
   updateDeck: (id: string, name: string) => Promise<void>;
   deleteDeck: (id: string) => Promise<void>;
@@ -20,10 +20,7 @@ export const useDeckStore = create<DeckState>()((set, get) => ({
   decks: [],
   initialized: false,
 
-  fetchDecks: async () => {
-    const res = await fetch("/api/decks");
-    if (!res.ok) throw new Error("Failed to fetch decks");
-    const decks: Deck[] = await res.json();
+  setDecks: (decks: Deck[]) => {
     set({ decks, initialized: true });
   },
 

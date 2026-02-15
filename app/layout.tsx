@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import ThemeRegistry from "@/components/common/ThemeRegistry";
 import DataInitializer from "@/components/common/DataInitializer";
@@ -13,6 +14,12 @@ import ToastProvider from "@/components/common/ToastProvider";
 
 import { SessionProvider } from "next-auth/react";
 
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800", "900"],
+});
+
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -20,7 +27,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja">
-      <body>
+      <body className={inter.className}>
         <SessionProvider>
           <ThemeRegistry>
             <DataInitializer />

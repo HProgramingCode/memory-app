@@ -1,6 +1,7 @@
 // app/page.tsx
 import Dashboard from "@/components/dashboard/Dashboard";
-import { getCards } from "@/lib/cards";
+import { getCards } from "@/features/cards/repository";
+import { getDecks } from "@/features/decks/repository";
 import { auth } from "@/auth";
 
 export default async function Page() {
@@ -8,7 +9,7 @@ export default async function Page() {
   const session = await auth();
   if (!session?.user?.id) {
     // 未認証ならリダイレクトや空配列
-    return <Dashboard initialCards={[]} />;
+    return <Dashboard initialCards={[]} initialDecks={[]} />;
   }
 
   // Prisma でカード取得
@@ -18,5 +19,16 @@ export default async function Page() {
     createdAt: card.createdAt.toISOString(),
     updatedAt: card.updatedAt.toISOString(),
   }));
-  return <Dashboard initialCards={initialCards} />;
+  const decks = await getDecks(session.user.id);
+  const initialDecks = decks.map((deck) => ({
+    ...deck,
+    createdAt: deck.createdAt.toISOString(),
+    updatedAt: deck.updatedAt.toISOString(),
+  }));
+  return (
+    <Dashboard
+      initialCards={initialCards}
+      initialDecks={initialDecks}
+    />
+  );
 }

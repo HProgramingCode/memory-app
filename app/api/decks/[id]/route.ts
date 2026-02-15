@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-
 import { auth } from "@/auth";
+import { getDeck, updateDeck, deleteDeck } from "@/features/decks/repository";
 
 /** GET /api/decks/:id - デッキ取得 */
 export async function GET(
@@ -13,9 +12,7 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { id } = await params;
-  const deck = await prisma.deck.findUnique({
-    where: { id },
-  });
+  const deck = await getDeck(id);
 
   if (!deck || deck.userId !== session.user.id) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -39,15 +36,12 @@ export async function PUT(
   }
 
   // 存在確認と権限チェック
-  const existing = await prisma.deck.findUnique({ where: { id } });
+  const existing = await getDeck(id);
   if (!existing || existing.userId !== session.user.id) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const deck = await prisma.deck.update({
-    where: { id },
-    data: { name: name.trim() },
-  });
+  const deck = await updateDeck(id, name.trim());
   return NextResponse.json(deck);
 }
 
@@ -63,11 +57,11 @@ export async function DELETE(
   const { id } = await params;
 
   // 存在確認と権限チェック
-  const existing = await prisma.deck.findUnique({ where: { id } });
+  const existing = await getDeck(id);
   if (!existing || existing.userId !== session.user.id) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  await prisma.deck.delete({ where: { id } });
+  await deleteDeck(id);
   return NextResponse.json({ success: true });
 }

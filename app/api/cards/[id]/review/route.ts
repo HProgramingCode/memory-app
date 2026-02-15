@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { calculateNextReview } from "@/lib/srs";
 import type { Card, ReviewRating } from "@/types";
-
 import { auth } from "@/auth";
+import { getCardById } from "@/features/cards/repository";
+import { updateCard } from "@/features/cards/repository";
 
 /** POST /api/cards/:id/review - 復習結果を反映 */
 export async function POST(
@@ -23,7 +23,7 @@ export async function POST(
   }
 
   // 存在確認と権限チェック
-  const existing = await prisma.card.findUnique({ where: { id } });
+  const existing = await getCardById(id);
   if (!existing || existing.userId !== session.user.id) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
@@ -39,15 +39,11 @@ export async function POST(
 
   const srsUpdate = calculateNextReview(cardForSrs, rating as ReviewRating);
 
-  const card = await prisma.card.update({
-    where: { id },
-    data: {
-      nextReviewDate: srsUpdate.nextReviewDate,
-      intervalDays: srsUpdate.intervalDays,
-      repetitionCount: srsUpdate.repetitionCount,
-      easeFactor: srsUpdate.easeFactor,
-    },
+  const card = await updateCard(id, {
+    nextReviewDate: srsUpdate.nextReviewDate,
+    intervalDays: srsUpdate.intervalDays,
+    repetitionCount: srsUpdate.repetitionCount,
+    easeFactor: srsUpdate.easeFactor,
   });
-
   return NextResponse.json(card);
 }

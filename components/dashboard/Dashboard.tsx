@@ -10,7 +10,8 @@ import StudySummaryCard from "@/components/dashboard/StudySummaryCard";
 import MasteryChart from "@/components/dashboard/MasteryChart";
 import { Divider, Box, Stack } from "@mui/material";
 import { useEffect } from "react";
-import { Card } from "@/types";
+import { Card, Deck } from "@/types";
+import { useDeckStore } from "@/stores/useDeckStore";
 
 /**
  * ダッシュボード
@@ -21,15 +22,19 @@ import { Card } from "@/types";
  * 3. Charts — 定着度 + 学習推移をグリッドで
  * 4. Deck List — コンテンツ管理
  */
-export default function DashboardPage({ initialCards }: { initialCards: Card[] }) {
+export default function DashboardPage({ initialCards, initialDecks }: { initialCards: Card[]; initialDecks: Deck[] }) {
   const { cards, getDueCards, replaceAll } = useCardStore();
   const { getStreak, getTodayRecord } = useStudyStore();
+  const { replaceAll: replaceDecks } = useDeckStore();
 
   useEffect(() => {
-    if (initialCards.length) {
-      replaceAll(initialCards);
-    }
+    replaceAll(initialCards);
   }, [initialCards, replaceAll]);
+
+  useEffect(() => {
+    replaceDecks(initialDecks);
+  }, [initialDecks, replaceDecks]);
+
 
   const dueCards = getDueCards();
   const streak = getStreak();
