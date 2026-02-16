@@ -454,3 +454,4 @@ npm run dev
 | 2026-02-10 | 認証機能（NextAuth.js + Google OAuth）追加。ダッシュボードUI刷新（DailyStudyChart追加、TodayMasteryCard削除）。エラーハンドリングページ、ログインページ、シードスクリプト追加 |
 | 2026-02-13 | 責務分離 一覧取得をSSRに修正進捗30% 対応具体内容:CSRからFetchしていた一覧取得をServer Componentで取得するように変更。Cards取得のみ修正　残: useDeckの取得、useStudyRecordsの取得 |
 | 2026-02-16 | 責務分離 一覧取得をSSRに修正進捗60% 対応具体内容:useDeckの一覧取得をServer Componentで取得するように変更、責務分離をより明確化 残:useStudyRecordsの取得、 「UIの途中状態をユーザーに見せずに、最終形で初回レンダリングしたい」 が現状の課題|
+| 2026-02-09 | 初版作成 | studyRateのapiとDBの操作の責務分離 |
