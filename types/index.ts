@@ -53,6 +53,9 @@ export interface StudyRecord {
   goodCount: number;
 }
 
+/** 評価 */
+export type Rating = "again" | "hard" | "good";
+
 /** エクスポート用データ構造 */
 export interface ExportData {
   version: 1;
