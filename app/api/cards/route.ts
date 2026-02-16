@@ -1,21 +1,29 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { SRS_DEFAULTS, getTodayString } from "@/lib/srs";
+import { auth } from "@/auth";
+import { getCards } from "@/features/cards/repository";
+import { createCard } from "@/features/cards/actions";
 
 /** GET /api/cards - 全カード取得（deckId でフィルタ可能） */
 export async function GET(request: Request) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { searchParams } = new URL(request.url);
   const deckId = searchParams.get("deckId");
 
-  const cards = await prisma.card.findMany({
-    where: deckId ? { deckId } : undefined,
-    orderBy: { createdAt: "asc" },
-  });
+  const cards = await getCards(session.user.id, deckId);
   return NextResponse.json(cards);
 }
 
 /** POST /api/cards - カード作成 */
 export async function POST(request: Request) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const body = await request.json();
   const { deckId, frontText, backText, frontImageId, backImageId } = body;
 
@@ -23,18 +31,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "deckId is required" }, { status: 400 });
   }
 
-  const card = await prisma.card.create({
-    data: {
+  try {
+    const card = await createCard({
+      userId: session.user.id,
       deckId,
-      frontText: frontText ?? "",
-      backText: backText ?? "",
-      frontImageId: frontImageId ?? null,
-      backImageId: backImageId ?? null,
-      nextReviewDate: getTodayString(),
-      intervalDays: SRS_DEFAULTS.intervalDays,
-      repetitionCount: SRS_DEFAULTS.repetitionCount,
-      easeFactor: SRS_DEFAULTS.easeFactor,
-    },
-  });
-  return NextResponse.json(card, { status: 201 });
+      frontText,
+      backText,
+      frontImageId,
+      backImageId,
+    });
+
+    return NextResponse.json(card, { status: 201 });
+  } catch (e) {
+    if (e instanceof Error && e.message === "DECK_NOT_FOUND") {
+      return NextResponse.json({ error: "Deck not found" }, { status: 404 });
+    }
+    throw e;
+  }
 }

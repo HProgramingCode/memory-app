@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, CardContent, Typography, Box } from "@mui/material";
+import { Card, CardContent, Typography, Box, Stack, Divider } from "@mui/material";
 import { isMastered } from "@/lib/srs";
 import type { Card as CardType } from "@/types";
 
@@ -9,8 +9,7 @@ interface MasteryChartProps {
 }
 
 /**
- * 定着度グラフ（シンプルなドーナツ風の円グラフ）
- * 外部ライブラリを使わず、CSS + SVG で実装
+ * 定着度グラフ — ドーナツチャート（ライトモード対応）
  */
 export default function MasteryChart({ cards }: MasteryChartProps) {
   const total = cards.length;
@@ -18,65 +17,66 @@ export default function MasteryChart({ cards }: MasteryChartProps) {
   const learning = total - mastered;
   const masteredPct = total > 0 ? (mastered / total) * 100 : 0;
 
-  // SVG 円グラフ用の計算
-  const radius = 50;
+  const radius = 48;
   const circumference = 2 * Math.PI * radius;
   const masteredArc = (masteredPct / 100) * circumference;
 
   return (
-    <Card>
-      <CardContent sx={{ p: 3 }}>
-        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+    <Card sx={{ height: "100%" }}>
+      <CardContent sx={{ p: 3, display: "flex", flexDirection: "column", height: "100%" }}>
+        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
           カードの定着度
         </Typography>
 
         {total === 0 ? (
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={{ textAlign: "center", py: 3 }}
-          >
-            カードを登録すると定着度が表示されます
-          </Typography>
+          <Box sx={{ flexGrow: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Typography variant="body2" color="text.secondary">
+              カードを追加して学習を始めましょう ✨
+            </Typography>
+          </Box>
         ) : (
           <Box
             sx={{
               display: "flex",
+              flexDirection: "column",
               alignItems: "center",
               justifyContent: "center",
-              gap: 3,
+              flexGrow: 1,
+              gap: 2,
               mt: 1,
             }}
           >
-            {/* SVG ドーナツチャート */}
-            <Box sx={{ position: "relative", width: 120, height: 120 }}>
+            <Box sx={{ position: "relative", width: 130, height: 130 }}>
               <svg
-                width="120"
-                height="120"
-                viewBox="0 0 120 120"
+                width="130"
+                height="130"
+                viewBox="0 0 130 130"
                 style={{ transform: "rotate(-90deg)" }}
               >
-                {/* 背景円 */}
+                <defs>
+                  <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#10b981" />
+                    <stop offset="100%" stopColor="#34d399" />
+                  </linearGradient>
+                </defs>
                 <circle
-                  cx="60"
-                  cy="60"
+                  cx="65"
+                  cy="65"
                   r={radius}
                   fill="none"
-                  stroke="#E0E0E0"
-                  strokeWidth="12"
+                  stroke="#f1f5f9"
+                  strokeWidth="10"
                 />
-                {/* 定着済み部分 */}
                 <circle
-                  cx="60"
-                  cy="60"
+                  cx="65"
+                  cy="65"
                   r={radius}
                   fill="none"
-                  stroke="#66BB6A"
-                  strokeWidth="12"
-                  strokeDasharray={`${masteredArc} ${
-                    circumference - masteredArc
-                  }`}
+                  stroke="url(#ringGradient)"
+                  strokeWidth="10"
+                  strokeDasharray={`${masteredArc} ${circumference - masteredArc}`}
                   strokeLinecap="round"
+                  style={{ transition: "stroke-dasharray 0.8s cubic-bezier(0.4, 0, 0.2, 1)" }}
                 />
               </svg>
               <Box
@@ -88,39 +88,37 @@ export default function MasteryChart({ cards }: MasteryChartProps) {
                   textAlign: "center",
                 }}
               >
-                <Typography variant="h6" sx={{ lineHeight: 1 }}>
+                <Typography
+                  variant="h5"
+                  sx={{ fontWeight: 900, color: "#10b981", lineHeight: 1 }}
+                >
                   {Math.round(masteredPct)}%
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.6rem" }}>
+                  定着済み
                 </Typography>
               </Box>
             </Box>
 
-            {/* 凡例 */}
-            <Box>
-              <Box
-                sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}
-              >
-                <Box
-                  sx={{
-                    width: 12,
-                    height: 12,
-                    borderRadius: "50%",
-                    bgcolor: "#66BB6A",
-                  }}
-                />
-                <Typography variant="body2">定着済み: {mastered} 枚</Typography>
+            <Stack direction="row" spacing={4} sx={{ mt: 0.5 }}>
+              <Box sx={{ textAlign: "center" }}>
+                <Typography variant="h6" sx={{ fontWeight: 800, lineHeight: 1, color: "#10b981" }}>
+                  {mastered}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.6rem" }}>
+                  定着済み
+                </Typography>
               </Box>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <Box
-                  sx={{
-                    width: 12,
-                    height: 12,
-                    borderRadius: "50%",
-                    bgcolor: "#E0E0E0",
-                  }}
-                />
-                <Typography variant="body2">学習中: {learning} 枚</Typography>
+              <Divider orientation="vertical" flexItem />
+              <Box sx={{ textAlign: "center" }}>
+                <Typography variant="h6" sx={{ fontWeight: 800, lineHeight: 1, color: "text.secondary" }}>
+                  {learning}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.6rem" }}>
+                  学習中
+                </Typography>
               </Box>
-            </Box>
+            </Stack>
           </Box>
         )}
       </CardContent>
