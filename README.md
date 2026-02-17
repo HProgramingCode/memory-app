@@ -1,8 +1,5 @@
-# memory-app
-
-## 開発中のため、ソースコードは、devブランチを参照してください。
-
 # Memory App
+## 開発中のため、ソースコードは、devブランチを参照してください。
 
 Memory App は、**間隔反復学習（SRS: Spaced Repetition System）** を用いた
 フラッシュカード型の学習アプリです。
