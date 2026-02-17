@@ -10,7 +10,7 @@ import StudySummaryCard from "@/components/dashboard/StudySummaryCard";
 import MasteryChart from "@/components/dashboard/MasteryChart";
 import { Divider, Box, Stack } from "@mui/material";
 import { useEffect } from "react";
-import { Card, Deck } from "@/types";
+import { Card, Deck, StudyRecord } from "@/types";
 import { useDeckStore } from "@/stores/useDeckStore";
 
 /**
@@ -22,9 +22,21 @@ import { useDeckStore } from "@/stores/useDeckStore";
  * 3. Charts — 定着度 + 学習推移をグリッドで
  * 4. Deck List — コンテンツ管理
  */
-export default function DashboardPage({ initialCards, initialDecks }: { initialCards: Card[]; initialDecks: Deck[] }) {
+export default function DashboardPage({
+  initialCards,
+  initialDecks,
+  initialStudyRecords,
+}: {
+  initialCards: Card[];
+  initialDecks: Deck[];
+  initialStudyRecords: StudyRecord[];
+}) {
   const { cards, getDueCards, replaceAll } = useCardStore();
-  const { getStreak, getTodayRecord } = useStudyStore();
+  const {
+    getStreak,
+    getTodayRecord,
+    replaceAll: replaceStudyRecords,
+  } = useStudyStore();
   const { replaceAll: replaceDecks } = useDeckStore();
 
   useEffect(() => {
@@ -35,11 +47,15 @@ export default function DashboardPage({ initialCards, initialDecks }: { initialC
     replaceDecks(initialDecks);
   }, [initialDecks, replaceDecks]);
 
+  useEffect(() => {
+    replaceStudyRecords(initialStudyRecords);
+  }, [initialStudyRecords, replaceStudyRecords]);
 
   const dueCards = getDueCards();
   const streak = getStreak();
   const todayRecord = getTodayRecord();
-  const todayStudyCount = (todayRecord?.reviewedCount || 0) + (todayRecord?.freeStudyCount || 0);
+  const todayStudyCount =
+    (todayRecord?.reviewedCount || 0) + (todayRecord?.freeStudyCount || 0);
 
   return (
     <AppLayout>

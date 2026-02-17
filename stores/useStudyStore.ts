@@ -8,7 +8,7 @@ interface StudyState {
   initialized: boolean;
 
   /** API から学習記録を取得してストアを初期化 */
-  fetchRecords: () => Promise<void>;
+  setRecords: (records: StudyRecord[]) => void;
 
   /** 今日の復習を1枚完了したことを記録（rating付き） */
   recordReview: (rating: ReviewRating) => Promise<void>;
@@ -52,9 +52,7 @@ function upsertRecord(
   const existing = state.records.find((r) => r.date === record.date);
   if (existing) {
     return {
-      records: state.records.map((r) =>
-        r.date === record.date ? record : r
-      ),
+      records: state.records.map((r) => (r.date === record.date ? record : r)),
     };
   }
   return { records: [...state.records, record] };
@@ -64,12 +62,7 @@ export const useStudyStore = create<StudyState>()((set, get) => ({
   records: [],
   initialized: false,
 
-  fetchRecords: async () => {
-    const res = await fetch("/api/study-records");
-    if (!res.ok) throw new Error("Failed to fetch study records");
-    const records: StudyRecord[] = await res.json();
-    set({ records, initialized: true });
-  },
+  setRecords: (records: StudyRecord[]) => set({ records, initialized: true }),
 
   recordReview: async (rating: ReviewRating) => {
     try {

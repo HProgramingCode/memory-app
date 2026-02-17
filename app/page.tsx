@@ -2,6 +2,7 @@
 import Dashboard from "@/components/dashboard/Dashboard";
 import { getCards } from "@/features/cards/repository";
 import { getDecks } from "@/features/decks/repository";
+import { getStudyRecords } from "@/features/studyRate/repository";
 import { auth } from "@/auth";
 
 export default async function Page() {
@@ -9,7 +10,9 @@ export default async function Page() {
   const session = await auth();
   if (!session?.user?.id) {
     // 未認証ならリダイレクトや空配列
-    return <Dashboard initialCards={[]} initialDecks={[]} />;
+    return (
+      <Dashboard initialCards={[]} initialDecks={[]} initialStudyRecords={[]} />
+    );
   }
 
   // Prisma でカード取得
@@ -25,10 +28,15 @@ export default async function Page() {
     createdAt: deck.createdAt.toISOString(),
     updatedAt: deck.updatedAt.toISOString(),
   }));
+  const studyRecords = await getStudyRecords(session.user.id);
+  const initialStudyRecords = studyRecords.map((studyRecord) => ({
+    ...studyRecord,
+  }));
   return (
     <Dashboard
       initialCards={initialCards}
       initialDecks={initialDecks}
+      initialStudyRecords={initialStudyRecords}
     />
   );
 }
