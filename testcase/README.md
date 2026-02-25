@@ -16,9 +16,11 @@ testcase/
 ├── e2e/                    # E2E（Playwright）用シナリオ
 │   ├── 01_login_dashboard.md
 │   ├── 02_card_creation_study.md
-│   └── 03_review_srs.md
+│   ├── 03_review_srs.md
+│   └── IMPLEMENTATION_GUIDE.md  # ★ ジュニア向け実装ガイド
 ├── unit/                   # ユニットテスト用
-│   └── 01_srs.md
+│   ├── 01_srs.md
+│   └── IMPLEMENTATION_GUIDE.md  # ★ ジュニア向け実装ガイド
 └── fixtures/               # テスト用ダミーデータ
     ├── README.md
     ├── card.ts
@@ -29,7 +31,7 @@ testcase/
 ## 実装時の前提
 
 - **認証:** E2E では `project` でログイン済み `storageState` を再利用する想定。初回は手動ログインして `npx playwright codegen` 等で state を保存してもよい。
-- **データ:** シード（`prisma/seed.ts`）のテストユーザー・デッキ・カードを利用するか、テスト内で作成する。
+- **データ:** E2E 用は `npm run seed:e2e` で固定データを投入可能（`prisma/seed.e2e.ts`）。通常シードは `prisma/seed.ts`。
 - **環境:** `npm run build` および `npm run start` で起動したアプリに対して実行するか、`webServer` で `npm run dev` を起動する。
 
 ## 並列実行時の注意
@@ -140,8 +142,94 @@ npm run test          # ユニット（Vitest）
 npm run test:e2e      # E2E（Playwright）
 ```
 
+## E2E 実行手順（初回〜毎回）
+
+### 初回だけ
+
+1. **認証用 state を用意する**  
+   アプリで Google ログインし、その状態を保存する。
+   ```bash
+   # アプリを起動してから別ターミナルで（テストで使うのと同じ起動方法で起動したサーバーで行うこと）
+   npx playwright codegen --channel=chrome --save-storage=tests/.auth/user.json http://localhost:3000/login
+   ```
+   開いたブラウザで手動ログインし、完了したらブラウザを閉じる。`tests/.auth/user.json` が作成される。  
+   **重要:** `user.json` は「テスト実行時に使うサーバー」に対して作成する。パターン A のときは `npm run start` で一度起動してから codegen で作成すると、同じ AUTH_SECRET・DB で動く Playwright 起動サーバーとセッションが一致する。
+
+### 毎回 E2E を回すとき
+
+**パターン A: ポート 3000 を空けて Playwright にアプリ起動を任せる**
+
+1. `npm run dev` や `npm run start` を止め、**3000 番が空いている**状態にする。
+2. **E2E 用データを入れる**
+   ```bash
+   npm run seed:e2e
+   ```
+3. **E2E を実行**
+   ```bash
+   npm run test:e2e
+   ```
+   または特定ファイルだけ:
+   ```bash
+   npm run test:e2e -- tests/e2e/01_login_dashboard.spec.ts
+   npm run test:e2e -- tests/e2e/03_review_srs.spec.ts
+   ```
+   Playwright が `npm run start` でアプリを起動し、テスト後に終了する。`playwright.config.ts` で `.env` を読み込んでいるため、起動されるサーバーは手元の `DATABASE_URL`・`AUTH_*` と同じ設定で動く。
+
+**パターン B: 手動でアプリを起動しておく**
+
+1. **ターミナル 1:** アプリを起動
+   ```bash
+   npm run dev
+   ```
+2. **ターミナル 2:** データ投入 → E2E 実行
+   ```bash
+   npm run seed:e2e
+   SKIP_WEBSERVER=1 npm run test:e2e
+   ```
+   `SKIP_WEBSERVER=1` を付けると、Playwright はサーバーを起動せず、既に動いている 3000 番を使う。
+
+### レポートを開く
+
+失敗時に HTML レポートを開く:
+
+```bash
+npx playwright show-report
+```
+
+## E2E テストデータ（seed.e2e）
+
+### 実行方法
+
+1. **事前:** アプリで 1 回 Google ログインし、`tests/.auth/user.json` を用意する（未作成なら `npx playwright codegen --channel=chrome --save-storage=tests/.auth/user.json http://localhost:3000/login`）。
+2. **DB を E2E 用にリセット:** `npm run seed:e2e` を実行する。  
+   - 先頭ユーザーのデッキ・カード・学習記録を削除し、今日が due のカード 4 枚・デッキ 2 個を作り直す。  
+   - デフォルトで **prisma/dev.db** に流す（アプリの `lib/prisma.ts` と同じ）。`.env` で `DATABASE_URL` を変えていなければ、アプリと同一 DB になる。
+3. **E2E 実行:** `npm run test:e2e` で認証付きテストが動く。
+
+別 DB に流し込む場合（例: test.db）:
+
+```bash
+DATABASE_URL=file:./test.db npm run seed:e2e
+```
+
+その場合はアプリ起動時も `DATABASE_URL=file:./test.db` を渡す必要がある。
+
+### Git に上げるもの・上げないもの
+
+| 対象 | 上げる？ | 理由 |
+|------|----------|------|
+| **prisma/seed.e2e.ts** | ✅ 上げる | テスト用シードの「コード」なので共有する。 |
+| **prisma/dev.db** | ❌ 上げない | ローカル用 DB（既に .gitignore）。 |
+| **prisma/test.db** | ❌ 上げない | E2E 用に使う場合の DB ファイル。.gitignore に追加済み。 |
+| **tests/.auth/user.json** | ❌ 上げない | ログイン状態（セッション）が含まれるため。.gitignore 済み。 |
+
+シード**スクリプト**は Git にコミットし、**DB ファイル**（dev.db / test.db）と認証 state（user.json）はコミットしない。
+
 ## 参照
 
 - 要件: `requirements/15_test_requirement.md`
 - 設計: `ARCHITECTURE.md`（特に SRS 早見表・データフロー）
+- SRS 詳細設計: `requirements/srs詳細設計.md`
 - フィクスチャ例: `testcase/fixtures/` 配下
+- **ユニットテスト実装ガイド**: `testcase/unit/IMPLEMENTATION_GUIDE.md`（ジュニア向け解説）
+- **E2E テスト実装ガイド**: `testcase/e2e/IMPLEMENTATION_GUIDE.md`（ジュニア向け解説）
