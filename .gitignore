@@ -43,6 +43,7 @@ next-env.d.ts
 # prisma
 prisma/dev.db
 prisma/dev.db-journal
+prisma/turso_init.sql
 lib/generated/
 
 /lib/generated/prisma
