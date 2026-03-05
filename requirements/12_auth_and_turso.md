@@ -1,7 +1,9 @@
 # ユーザー認証 + Turso 導入 (AUTH_AND_TURSO)
 
-> **最終更新:** 2026-02-09
-> **ステータス:** ⬜ 未着手
+> **最終更新:** 2026-02-26
+> **ステータス:** Phase C・D 完了。Phase B（Turso）未着手。
+>
+> **Turso 移行の進捗・手動作業一覧:** [requirements/turso/](turso/) 配下を参照（[01_turso_migration_progress.md](turso/01_turso_migration_progress.md)）。
 
 ## 1. 背景
 
@@ -43,6 +45,8 @@ Phase 1 は認証なし・単一ユーザーの前提で開発された。
 
 #### Phase B: Turso + Prisma アダプタ移行
 
+**進捗・自分で着手すべき手順:** [turso/01_turso_migration_progress.md](turso/01_turso_migration_progress.md) を参照。
+
 | # | タスク | 状態 | 手動/実装 | 備考 |
 |---|--------|------|-----------|------|
 | 11-5 | `@prisma/adapter-libsql` インストール | ⬜ | 実装 | Turso 用 Prisma アダプタ |
@@ -50,28 +54,28 @@ Phase 1 は認証なし・単一ユーザーの前提で開発された。
 | 11-7 | `prisma.config.ts` を Turso 対応に更新 | ⬜ | 実装 | |
 | 11-8 | Turso へのマイグレーション適用確認 | ⬜ | 実装 | `prisma migrate` or `prisma db push` |
 
-#### Phase C: NextAuth.js 導入
+#### Phase C: NextAuth.js 導入 — ✅ 完了
 
 | # | タスク | 状態 | 手動/実装 | 備考 |
 |---|--------|------|-----------|------|
-| 11-9 | `next-auth` + `@auth/prisma-adapter` インストール | ⬜ | 実装 | |
-| 11-10 | Prisma スキーマに認証テーブル追加 | ⬜ | 実装 | User, Account, Session, VerificationToken |
-| 11-11 | NextAuth 設定ファイル作成 | ⬜ | 実装 | `app/api/auth/[...nextauth]/route.ts` + `auth.ts` |
-| 11-12 | Google / GitHub プロバイダ設定 | ⬜ | 実装 | |
-| 11-13 | ログイン / ログアウト UI | ⬜ | 実装 | ヘッダーにユーザーアバター + ドロップダウン |
-| 11-14 | 認証ミドルウェア（保護ルート） | ⬜ | 実装 | `middleware.ts` で未認証ユーザーをリダイレクト |
+| 11-9 | `next-auth` + `@auth/prisma-adapter` インストール | ✅ | 実装 | |
+| 11-10 | Prisma スキーマに認証テーブル追加 | ✅ | 実装 | User, Account, Session, VerificationToken |
+| 11-11 | NextAuth 設定ファイル作成 | ✅ | 実装 | `app/api/auth/[...nextauth]/route.ts` + `auth.ts` |
+| 11-12 | Google / GitHub プロバイダ設定 | ✅ | 実装 | |
+| 11-13 | ログイン / ログアウト UI | ✅ | 実装 | ヘッダーにユーザーアバター + ドロップダウン |
+| 11-14 | 認証ミドルウェア（保護ルート） | ✅ | 実装 | `middleware.ts` で未認証ユーザーをリダイレクト |
 
-#### Phase D: マルチユーザー データ分離
+#### Phase D: マルチユーザー データ分離 — ✅ 完了
 
 | # | タスク | 状態 | 手動/実装 | 備考 |
 |---|--------|------|-----------|------|
-| 11-15 | Prisma スキーマに `userId` 追加 | ⬜ | 実装 | Deck, Card, StudyRecord に追加 |
-| 11-16 | マイグレーション実行 | ⬜ | 実装 | |
-| 11-17 | TypeScript 型定義の更新 | ⬜ | 実装 | types/index.ts |
-| 11-18 | 全 API Routes にセッション認証追加 | ⬜ | 実装 | 未認証は 401 返却 |
-| 11-19 | 全 API Routes に userId フィルタリング追加 | ⬜ | 実装 | decks, cards, study-records, export, import |
-| 11-20 | DataInitializer の認証対応 | ⬜ | 実装 | ログイン済みの場合のみデータ取得 |
-| 11-21 | Zustand ストアのリセット処理 | ⬜ | 実装 | ログアウト時にストアをクリア |
+| 11-15 | Prisma スキーマに `userId` 追加 | ✅ | 実装 | Deck, Card, StudyRecord に追加 |
+| 11-16 | マイグレーション実行 | ✅ | 実装 | |
+| 11-17 | TypeScript 型定義の更新 | ✅ | 実装 | types/index.ts |
+| 11-18 | 全 API Routes にセッション認証追加 | ✅ | 実装 | 未認証は 401 返却 |
+| 11-19 | 全 API Routes に userId フィルタリング追加 | ✅ | 実装 | decks, cards, study-records, export, import |
+| 11-20 | DataInitializer の認証対応 | ✅ | 実装 | ログイン済みの場合のみデータ取得 |
+| 11-21 | Zustand ストアのリセット処理 | ✅ | 実装 | ログアウト時にストアをクリア |
 
 #### Phase E: 統合テスト・仕上げ
 
@@ -91,19 +95,17 @@ Phase 1 は認証なし・単一ユーザーの前提で開発された。
 
 ## 4. 実装順序
 
+Phase C・D は完了済み。**現在の着手対象は Phase A（未実施なら）と Phase B（Turso）。**
+
 ```
-Phase A（手動セットアップ）
+Phase A（手動セットアップ） — 未実施なら先に実施
   ↓
-Phase B（Turso アダプタ移行）
-  ↓
-Phase C（NextAuth.js 導入）
-  ↓
-Phase D（マルチユーザー データ分離）
+Phase B（Turso アダプタ移行） ← ここから
   ↓
 Phase E（統合テスト・デプロイ）
 ```
 
-各 Phase は前の Phase が完了してから着手する。
+Turso の具体的な進捗・手順は [turso/01_turso_migration_progress.md](turso/01_turso_migration_progress.md) を参照。
 
 ## 5. 必要な環境変数（最終形）
 

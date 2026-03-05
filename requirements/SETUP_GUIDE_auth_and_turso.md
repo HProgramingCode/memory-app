@@ -64,6 +64,22 @@ URL:            libsql://memory-app-db-your-org.turso.io
 ID:             xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 Group:          default
 ...
+haru.0307@FukuokaHarus-MacBook-Pro memory-app % turso db show memory-app-db
+Name:               memory-app-db
+URL:                libsql://memory-app-db-hf-study.aws-ap-northeast-1.turso.io
+ID:                 019c959b-7401-79d6-bf25-47b893da4dd1
+Group:              default
+Version:            tech-preview
+Locations:          aws-ap-northeast-1
+Size:               0 B
+Archived:           No
+Bytes Synced:       0 B
+Is Schema:          No
+Delete Protection:  No
+
+Database Instances:
+NAME                   TYPE        LOCATION           
+aws-ap-northeast-1     primary     aws-ap-northeast-1   
 ```
 
 **→ `URL` の値をメモする（後で `.env` に設定）**
@@ -75,6 +91,7 @@ turso db tokens create memory-app-db
 ```
 
 長いトークン文字列が表示される。
+eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NzIwMzY1ODAsImlkIjoiMDE5Yzk1OWItNzQwMS03OWQ2LWJmMjUtNDdiODkzZGE0ZGQxIiwicmlkIjoiNTIwM2JkYWUtN2JjZi00N2Y3LTk0ODctMDc0ZjJjZTBjNTk2In0.adp4bUrTF9WpPvGr74OLjy6HyPlPDgDHR6-vUr5UHS_YGRWMOuXAhqxOsR0Ol-7rMrXTtp4yuz2qt0nDgUvkAw
 
 **→ トークンの値をメモする（後で `.env` に設定）**
 
@@ -276,11 +293,11 @@ GITHUB_CLIENT_SECRET="ここに GitHub Client Secret を貼る"
   - [ ] `GOOGLE_CLIENT_ID` をメモした
   - [ ] `GOOGLE_CLIENT_SECRET` をメモした
 
-- [ ] **GitHub OAuth**
+<!-- - [ ] **GitHub OAuth**
   - [ ] GitHub Developer Settings で OAuth App を作成した
   - [ ] Callback URL に `http://localhost:3000/api/auth/callback/github` を設定した
   - [ ] `GITHUB_CLIENT_ID` をメモした
-  - [ ] `GITHUB_CLIENT_SECRET` をメモした
+  - [ ] `GITHUB_CLIENT_SECRET` をメモした -->
 
 - [ ] **NextAuth Secret**
   - [ ] `openssl rand -base64 32` で秘密鍵を生成した

@@ -455,3 +455,9 @@ npm run dev
 | 2026-02-13 | 責務分離 一覧取得をSSRに修正進捗30% 対応具体内容:CSRからFetchしていた一覧取得をServer Componentで取得するように変更。Cards取得のみ修正　残: useDeckの取得、useStudyRecordsの取得 |
 | 2026-02-16 | 責務分離 一覧取得をSSRに修正進捗60% 対応具体内容:useDeckの一覧取得をServer Componentで取得するように変更、責務分離をより明確化 残:useStudyRecordsの取得、 「UIの途中状態をユーザーに見せずに、最終形で初回レンダリングしたい」 が現状の課題|
 | 2026-02-09 | 初版作成 | studyRateのapiとDBの操作の責務分離 |
+| 2026-02-18 | テストケース追加。testcase/ 配下に E2E（Playwright）3シナリオとユニット（SRS）の md を追加。要件は requirements/15_test_requirement.md に準拠 |
+| 2026-02-18 | E2E 用シード prisma/seed.e2e.ts 追加。npm run seed:e2e で先頭ユーザー向けに今日 due のカードを再投入。prisma/test.db を .gitignore に追加 |
+| 2026-02-18 | playwright.config.ts で dotenv により .env を読み込み。Playwright が起動する webServer が手元の DATABASE_URL・AUTH_* と同じ設定で動くようにした（03_review_srs 等のデータ不一致対策） |
+| 2026-02-26 | requirements/srs詳細設計.md 追加。SRS アルゴリズム（lib/srs.ts）の詳細設計ドキュメントを新規参画者向けに作成 |
+| 2026-02-26 | requirements/turso/ 配下に Turso 移行の進捗・手順ドキュメント（README.md, 01_turso_migration_progress.md）を追加。12_auth_and_turso.md を Phase C/D 完了・Turso 詳細は turso/ 参照に更新 |
+| 2026-02-26 | Turso 移行（ローカル検証まで）: @prisma/adapter-libsql 追加、lib/prisma.ts で TURSO_DATABASE_URL+TURSO_AUTH_TOKEN 時は PrismaLibSql、それ以外は better-sqlite3 に分岐。スキーマ適用手順を requirements/turso/01_turso_migration_progress.md §4 に記載 |
