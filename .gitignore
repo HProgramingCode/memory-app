@@ -47,3 +47,17 @@ prisma/turso_init.sql
 lib/generated/
 
 /lib/generated/prisma
+
+# test results (Playwright)
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
+# test auth state
+tests/.auth/
+tests/.seed-info.json
+
+# E2E test database
+prisma/test.db
+prisma/test.db-journal
