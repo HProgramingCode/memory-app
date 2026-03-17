@@ -25,6 +25,7 @@ model User {
   decks         Deck[]
   cards         Card[]
   studyRecords  StudyRecord[]
+  reviews       Review[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -143,4 +144,15 @@ model StudyRecord {
 
   // ユーザーごとに日付はユニークであるべき
   @@unique([userId, date])
+}
+
+/// 使用感レビュー（管理者のみ閲覧）
+model Review {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message   String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }

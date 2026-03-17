@@ -21,6 +21,7 @@ import { useCardStore } from "@/stores/useCardStore";
 import { useStudyStore } from "@/stores/useStudyStore";
 import MarkdownPreview from "@/components/common/MarkdownPreview";
 import CardImage from "@/components/review/CardImage";
+import ReviewLoading from "@/app/review/loading";
 import type { ReviewRating, Card as CardType } from "@/types";
 
 export default function ReviewPage() {
@@ -38,6 +39,7 @@ function ReviewContent() {
   const mode = searchParams.get("mode");
   const isFreeMode = mode === "free";
 
+  const cards = useCardStore((s) => s.cards);
   const getDueCards = useCardStore((s) => s.getDueCards);
   const getDueCardsByDeckId = useCardStore((s) => s.getDueCardsByDeckId);
   const getCardsByDeckId = useCardStore((s) => s.getCardsByDeckId);
@@ -57,26 +59,32 @@ function ReviewContent() {
   const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
-    let cards: CardType[] = [];
+    if (!isFreeMode && cards.length === 0) return;
+
+    let targetCards: CardType[] = [];
     if (isFreeMode) {
-      // 自由学習は deckId 必須
-      if (!deckId) { setIsCompleted(true); return; }
-      cards = getCardsByDeckId(deckId);
+      if (!deckId) {
+        setIsCompleted(true);
+        return;
+      }
+      targetCards = getCardsByDeckId(deckId);
       const lastIndex = getLastStudyIndex(deckId);
-      if (lastIndex > 0 && lastIndex < cards.length) {
+      if (lastIndex > 0 && lastIndex < targetCards.length) {
         setShowStartDialog(true);
-        setReviewCards(cards);
+        setReviewCards(targetCards);
         return;
       }
     } else {
-      // 通常復習: deckId があればそのデッキ、なければ全デッキの due cards
-      cards = deckId ? getDueCardsByDeckId(deckId) : getDueCards();
-      if (cards.length === 0) { setIsCompleted(true); return; }
+      targetCards = deckId ? getDueCardsByDeckId(deckId) : getDueCards();
+      if (targetCards.length === 0) {
+        setIsCompleted(true);
+        return;
+      }
     }
     if (!isFreeMode || (isFreeMode && deckId && getLastStudyIndex(deckId) === 0)) {
-      startSession(cards, 0, true);
+      startSession(targetCards, 0, true);
     }
-  }, [deckId, isFreeMode, getCardsByDeckId, getDueCardsByDeckId, getDueCards, getLastStudyIndex]);
+  }, [deckId, isFreeMode, cards.length, getCardsByDeckId, getDueCardsByDeckId, getDueCards, getLastStudyIndex]);
 
   const startSession = (cards: CardType[], startIndex: number, shuffle: boolean) => {
     let targetCards = [...cards];
@@ -160,6 +168,10 @@ function ReviewContent() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [showAnswer, showStartDialog, isCompleted, isProcessing, isFreeMode, flipToAnswer, handleNext, handleRate]);
+
+  if (!isFreeMode && cards.length === 0) {
+    return <ReviewLoading />;
+  }
 
   // ダイアログ
   if (showStartDialog) {

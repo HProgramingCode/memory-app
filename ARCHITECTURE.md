@@ -1,6 +1,6 @@
 # Memory App - 保守・引き継ぎドキュメント
 
-> **最終更新:** 2026-02-10
+> **最終更新:** 2026-03-17
 >
 > このドキュメントは、Memory App のソースコードを保守・改修する人間が「コードを読む前に全体を理解する」ためのものです。
 > コードの逐語的な説明ではなく、**設計意図・判断の理由・注意すべき箇所**に焦点を当てています。
@@ -31,10 +31,10 @@ Phase 1.5「認証機能追加」。NextAuth.js と Google OAuth による認証
 
 1. ユーザーがブラウザで `/` にアクセスする
 2. `app/layout.tsx` が読み込まれ、`ThemeRegistry`（MUI テーマ適用）と `DataInitializer` がマウントされる
-3. **`DataInitializer` が3つの API を並行して呼び出す**:
-   - `GET /api/decks` → 全デッキ取得
-   - `GET /api/cards` → 全カード取得
-   - `GET /api/study-records` → 全学習記録取得
+3. `**DataInitializer` が3つの API を並行して呼び出す**:
+  - `GET /api/decks` → 全デッキ取得
+  - `GET /api/cards` → 全カード取得
+  - `GET /api/study-records` → 全学習記録取得
 4. 取得したデータは **Zustand ストア**（`useDeckStore`, `useCardStore`, `useStudyStore`）に格納される
 5. 以降、フロントエンドの各コンポーネントはストアからデータを読み取る
 
@@ -50,9 +50,9 @@ Phase 1.5「認証機能追加」。NextAuth.js と Google OAuth による認証
 2. `/cards/new?deckId=xxx` に遷移し、`CardForm` コンポーネントが表示される
 3. 表面・裏面のテキスト（Markdown 対応）と画像を入力
 4. 保存時:
-   - 画像は **IndexedDB** に保存される（`lib/imageDb.ts`）
-   - テキストデータは **API → SQLite DB** に保存される（`POST /api/cards`）
-   - Zustand ストアにも即座に反映される
+  - 画像は **IndexedDB** に保存される（`lib/imageDb.ts`）
+  - テキストデータは **API → SQLite DB** に保存される（`POST /api/cards`）
+  - Zustand ストアにも即座に反映される
 
 ### 復習セッション（今日の復習）
 
@@ -61,9 +61,9 @@ Phase 1.5「認証機能追加」。NextAuth.js と Google OAuth による認証
 3. カードは Fisher-Yates アルゴリズムでシャッフルされる
 4. ユーザーは表面を見て「答えを見る」→ 裏面を確認 → 理解度を3段階で自己評価
 5. 評価に応じて SRS アルゴリズム (`lib/srs.ts`) が次回復習日を計算:
-   - **難しい (again):** 間隔リセット、翌日に再復習
-   - **普通 (hard):** 間隔 × 1.5倍
-   - **簡単 (good):** 間隔 × easeFactor倍
+  - **難しい (again):** 間隔リセット、翌日に再復習
+  - **普通 (hard):** 間隔 × 1.5倍
+  - **簡単 (good):** 間隔 × easeFactor倍
 6. 計算結果は `POST /api/cards/:id/review` でDB更新、ストアにも反映
 7. 同時に `POST /api/study-records` で「今日復習した枚数」を+1カウント、**評価別カウント**（againCount / hardCount / goodCount）も記録
 8. 全カード完了後、完了画面が表示される
@@ -135,33 +135,37 @@ memory-app/
 
 ### API エンドポイント一覧
 
-| パス | メソッド | 役割 |
-|------|----------|------|
-| `/api/auth/[...nextauth]` | GET / POST | NextAuth.js 認証（Google OAuth） |
-| `/api/decks` | GET / POST | デッキ一覧取得・作成 |
-| `/api/decks/[id]` | GET / PUT / DELETE | デッキ個別操作 |
-| `/api/cards` | GET / POST | カード一覧取得・作成 |
-| `/api/cards/[id]` | GET / PUT / DELETE | カード個別操作 |
-| `/api/cards/[id]/review` | POST | 復習結果の反映（SRS計算） |
-| `/api/study-records` | GET / POST | 学習記録の取得・復習/自由学習1件記録（rating + mode 対応） |
-| `/api/export` | GET | 全データJSON取得 |
-| `/api/import` | POST | 全データJSON置換（認証必須） |
+
+| パス                        | メソッド               | 役割                                    |
+| ------------------------- | ------------------ | ------------------------------------- |
+| `/api/auth/[...nextauth]` | GET / POST         | NextAuth.js 認証（Google OAuth）          |
+| `/api/decks`              | GET / POST         | デッキ一覧取得・作成                            |
+| `/api/decks/[id]`         | GET / PUT / DELETE | デッキ個別操作                               |
+| `/api/cards`              | GET / POST         | カード一覧取得・作成                            |
+| `/api/cards/[id]`         | GET / PUT / DELETE | カード個別操作                               |
+| `/api/cards/[id]/review`  | POST               | 復習結果の反映（SRS計算）                        |
+| `/api/study-records`      | GET / POST         | 学習記録の取得・復習/自由学習1件記録（rating + mode 対応） |
+| `/api/export`             | GET                | 全データJSON取得                            |
+| `/api/import`             | POST               | 全データJSON置換（認証必須）                      |
+
 
 ### 主要コンポーネントの責務
 
-| コンポーネント | 責務 |
-|--------------|------|
+
+| コンポーネント           | 責務                                                            |
+| ----------------- | ------------------------------------------------------------- |
 | `DataInitializer` | アプリ起動時にAPIからデータを取得してZustandストアに格納。レンダリングは何もしない（`return null`） |
-| `ThemeRegistry` | MUI テーマとCSSベースラインを全ページに適用 |
-| `AppLayout` | ヘッダー（アプリ名+設定ボタン）+ メインコンテンツ領域の共通レイアウト |
-| `CardForm` | カードの登録・編集フォーム。Markdown エディタ + プレビュー + 画像アップロード |
-| `DeckList` | デッキ一覧の表示・作成・名前変更・削除（コンテキストメニュー付き）+ 自由学習ボタン + デッキ別定着率 |
-| `MasteryChart` | 全体定着度のドーナツチャート（SVG描画。intervalDays ベース。外部チャートライブラリ不使用） |
-| `DailyStudyChart` | 直近7日間の学習枚数を棒グラフで表示（recharts 使用） |
-| `LoginButton` | Google OAuth ログインボタン |
-| `ToastProvider` | react-hot-toast によるトースト通知プロバイダー |
-| `MarkdownPreview` | Markdown テキストを HTML にレンダリング。コードブロックのシンタックスハイライト付き |
-| `CardImage` | IndexedDB から画像 Blob を取得して Blob URL で表示 |
+| `ThemeRegistry`   | MUI テーマとCSSベースラインを全ページに適用                                     |
+| `AppLayout`       | ヘッダー（アプリ名+設定ボタン）+ メインコンテンツ領域の共通レイアウト                          |
+| `CardForm`        | カードの登録・編集フォーム。Markdown エディタ + プレビュー + 画像アップロード                |
+| `DeckList`        | デッキ一覧の表示・作成・名前変更・削除（コンテキストメニュー付き）+ 自由学習ボタン + デッキ別定着率          |
+| `MasteryChart`    | 全体定着度のドーナツチャート（SVG描画。intervalDays ベース。外部チャートライブラリ不使用）         |
+| `DailyStudyChart` | 直近7日間の学習枚数を棒グラフで表示（recharts 使用）                               |
+| `LoginButton`     | Google OAuth ログインボタン                                          |
+| `ToastProvider`   | react-hot-toast によるトースト通知プロバイダー                               |
+| `MarkdownPreview` | Markdown テキストを HTML にレンダリング。コードブロックのシンタックスハイライト付き             |
+| `CardImage`       | IndexedDB から画像 Blob を取得して Blob URL で表示                        |
+
 
 ---
 
@@ -172,6 +176,7 @@ memory-app/
 **判断:** テキストデータは SQLite（サーバー側）、画像は IndexedDB（ブラウザ側）に分離
 
 **理由:**
+
 - Prisma + SQLite は構造化データの管理に適しているが、バイナリ（画像）の格納には不向き
 - IndexedDB は Blob を効率よく保存でき、サーバーにファイルアップロード機構を作る複雑さを回避できる
 - Phase 1 はシングルユーザー前提のため、ブラウザローカルに画像を持つデメリットが小さい
@@ -183,6 +188,7 @@ memory-app/
 **判断:** API からのレスポンスを Zustand ストアにキャッシュし、コンポーネントはストアを参照する
 
 **理由:**
+
 - React Server Components ではなく Client Components 主体の設計。全ページが `"use client"` で動作する
 - ストアをキャッシュとして使うことで、ページ遷移時にデータ再取得が不要
 - 操作（作成・更新・削除）はAPI呼び出し後にストアも同期更新する（楽観的更新ではない）
@@ -194,10 +200,12 @@ memory-app/
 **判断:** SM-2 をベースに、評価を3段階（again / hard / good）に簡略化
 
 **理由:**
+
 - オリジナル SM-2 は5段階評価だが、ユーザー体験の観点から3段階に絞った
 - 評価の選択肢が多すぎると、復習中のテンポが悪くなる
 
 **パラメータ:**
+
 - `easeFactor`: 初期値 2.5、again で -0.2、hard で -0.1、good で +0.1。下限 1.3
 - `intervalDays`: 初回 good で 3日、hard で 1日、again で常に 1日
 - 定着済み判定: `intervalDays >= 21`
@@ -207,6 +215,7 @@ memory-app/
 **判断:** `nextReviewDate` と `StudyRecord.date` は `YYYY-MM-DD` の文字列で管理
 
 **理由:**
+
 - タイムゾーン問題を回避するため、日時ではなく「日付」単位で扱う
 - 文字列比較（`<=`）で「今日以前 = 復習対象」の判定が可能
 
@@ -217,6 +226,7 @@ memory-app/
 **判断:** Prisma 7 の Driver Adapter 機能を使い、better-sqlite3 経由で SQLite に接続
 
 **理由:**
+
 - ローカル完結型 MVP のため、外部DBサーバーが不要な SQLite を採用
 - Prisma のマイグレーション機能と型安全なクエリの恩恵を受けつつ、セットアップの手軽さを両立
 
@@ -225,6 +235,7 @@ memory-app/
 **判断:** 自由学習の評価結果は SRS パラメータに反映しない
 
 **理由:**
+
 - SRS（忘却曲線ベース）の効果は「適切なタイミングでの復習」に依存する
 - 自由学習で「簡単」を連打すると `intervalDays` が急上昇し、本来の復習スケジュールが崩れる
 - 自由学習はあくまで「いつでも練習できる」機能であり、SRS とは独立した学習体験として設計
@@ -236,6 +247,7 @@ memory-app/
 **判断:** 既存の intervalDays ベースの定着度チャートと、復習セッションの評価結果ベースの定着率を並列表示
 
 **理由:**
+
 - intervalDays ベース（`MasteryChart`）は長期的な学習進捗を示す指標
 - セッション定着率（`TodayMasteryCard`）は今日の復習パフォーマンスを示す即時フィードバック
 - 両方あることで「長期の成長」と「今日の調子」の両面でモチベーションを維持できる
@@ -245,6 +257,7 @@ memory-app/
 **判断:** 復習画面（`/review`）は `AppLayout`（ヘッダー+コンテナ）を使わず、全画面レイアウト
 
 **理由:**
+
 - 復習中はフルフォーカスでカードに集中してほしいという UX 判断
 - ヘッダーの代わりに、プログレスバーと閉じるボタンだけを配置
 
@@ -257,6 +270,7 @@ memory-app/
 - **Node.js** がインストールされていること（Next.js 16.1.6 の要件に準拠）
 - **SQLite** の実行環境が必要（`better-sqlite3` がネイティブモジュールのためビルド環境が必要）
 - 環境変数 `DATABASE_URL` が `.env` に設定されていること（例: `file:./dev.db`）
+- 管理者用レビュー一覧（`/admin/reviews`）を利用する場合は、`.env` に `ADMIN_EMAILS` をカンマ区切りで設定すること（例: `ADMIN_EMAILS="admin@example.com"`）。未設定またはログインユーザーのメールが含まれない場合は 403
 - Prisma のクライアントコードは `lib/generated/prisma/` に生成される（`npx prisma generate` が必要）
 
 ### 暗黙のルール
@@ -334,49 +348,55 @@ API 呼び出しが失敗した場合、`throw new Error(...)` するだけで�
 
 ### 必ず理解すべき（改修前に必読）
 
-| ファイル | 理由 |
-|---------|------|
-| `lib/srs.ts` | アプリの核心ロジック。SRS の計算式を変えると全ユーザーの復習スケジュールに影響する |
-| `types/index.ts` | 全データ型の定義。型を変えるとフロント・バック両方に影響が波及する |
-| `prisma/schema.prisma` | DBスキーマ。フィールド追加・変更にはマイグレーションが必要 |
-| `stores/useCardStore.ts` | カードの全操作を担うストア。API呼び出し＋ストア同期＋画像削除が絡む |
-| `lib/exportImport.ts` | エクスポート/インポートのデータ構造。フォーマット変更は後方互換性に影響 |
-| `lib/imageDb.ts` | 画像の保存・取得・削除。IndexedDB の構造を理解しないと画像関連のバグを追えない |
-| `components/common/DataInitializer.tsx` | データ初期化の起点。初期化順序やタイミングの問題はここが関係する |
+
+| ファイル                                    | 理由                                           |
+| --------------------------------------- | -------------------------------------------- |
+| `lib/srs.ts`                            | アプリの核心ロジック。SRS の計算式を変えると全ユーザーの復習スケジュールに影響する  |
+| `types/index.ts`                        | 全データ型の定義。型を変えるとフロント・バック両方に影響が波及する            |
+| `prisma/schema.prisma`                  | DBスキーマ。フィールド追加・変更にはマイグレーションが必要               |
+| `stores/useCardStore.ts`                | カードの全操作を担うストア。API呼び出し＋ストア同期＋画像削除が絡む          |
+| `lib/exportImport.ts`                   | エクスポート/インポートのデータ構造。フォーマット変更は後方互換性に影響         |
+| `lib/imageDb.ts`                        | 画像の保存・取得・削除。IndexedDB の構造を理解しないと画像関連のバグを追えない |
+| `components/common/DataInitializer.tsx` | データ初期化の起点。初期化順序やタイミングの問題はここが関係する             |
+
 
 ### 重点的に理解すべき（機能追加時に参照）
 
-| ファイル | 理由 |
-|---------|------|
-| `app/api/cards/[id]/review/route.ts` | 復習APIのエンドポイント。SRS計算の呼び出し元 |
-| `app/api/import/route.ts` | トランザクション処理。データ置換の順序が重要 |
-| `stores/useStudyStore.ts` | ストリーク計算のロジック。日付周りのバグは大体ここ |
-| `components/card/CardForm.tsx` | 最も複雑なUIコンポーネント。画像+Markdown+デッキ選択が1つのフォームに集約 |
+
+| ファイル                                 | 理由                                          |
+| ------------------------------------ | ------------------------------------------- |
+| `app/api/cards/[id]/review/route.ts` | 復習APIのエンドポイント。SRS計算の呼び出し元                   |
+| `app/api/import/route.ts`            | トランザクション処理。データ置換の順序が重要                      |
+| `stores/useStudyStore.ts`            | ストリーク計算のロジック。日付周りのバグは大体ここ                   |
+| `components/card/CardForm.tsx`       | 最も複雑なUIコンポーネント。画像+Markdown+デッキ選択が1つのフォームに集約 |
+
 
 ### 流し読みでよい（構造がシンプル）
 
-| ファイル | 理由 |
-|---------|------|
-| `app/layout.tsx` | 定型的なレイアウト定義 |
-| `app/globals.css` | 最小限のリセットCSS（13行） |
-| `lib/theme.ts` | MUI テーマの色・角丸・フォント定義。デザイン変更時のみ参照 |
-| `lib/prisma.ts` | Prismaクライアント初期化のボイラープレート |
-| `components/common/ThemeRegistry.tsx` | テーマプロバイダのラッパー（定型） |
-| `components/common/ConfirmDialog.tsx` | 汎用確認ダイアログ（プロップスを渡すだけ） |
-| `components/common/EmptyState.tsx` | 空状態表示の汎用コンポーネント |
-| `components/common/MarkdownPreview.tsx` | Markdown レンダリング（react-markdown のラッパー） |
-| `components/review/CardImage.tsx` | IndexedDB から画像を取得して表示するだけ |
-| `components/dashboard/StudySummaryCard.tsx` | 表示のみのカードコンポーネント |
-| `components/dashboard/TodayReviewCard.tsx` | 表示のみのカードコンポーネント |
-| `components/dashboard/DailyStudyChart.tsx` | 表示のみのチャートコンポーネント（recharts 使用） |
-| `app/api/decks/route.ts` | 単純な CRUD |
-| `app/api/decks/[id]/route.ts` | 単純な CRUD |
-| `app/api/cards/route.ts` | 単純な CRUD |
-| `app/api/cards/[id]/route.ts` | 単純な CRUD |
-| `app/api/study-records/route.ts` | upsert を使った簡潔な記録処理 |
-| `next.config.ts` | 空の設定ファイル |
-| `prisma.config.ts` | Prisma の設定ファイル（自動生成ベース） |
-| `eslint.config.mjs` | ESLint 設定（Next.js 標準） |
+
+| ファイル                                        | 理由                                    |
+| ------------------------------------------- | ------------------------------------- |
+| `app/layout.tsx`                            | 定型的なレイアウト定義                           |
+| `app/globals.css`                           | 最小限のリセットCSS（13行）                      |
+| `lib/theme.ts`                              | MUI テーマの色・角丸・フォント定義。デザイン変更時のみ参照       |
+| `lib/prisma.ts`                             | Prismaクライアント初期化のボイラープレート              |
+| `components/common/ThemeRegistry.tsx`       | テーマプロバイダのラッパー（定型）                     |
+| `components/common/ConfirmDialog.tsx`       | 汎用確認ダイアログ（プロップスを渡すだけ）                 |
+| `components/common/EmptyState.tsx`          | 空状態表示の汎用コンポーネント                       |
+| `components/common/MarkdownPreview.tsx`     | Markdown レンダリング（react-markdown のラッパー） |
+| `components/review/CardImage.tsx`           | IndexedDB から画像を取得して表示するだけ             |
+| `components/dashboard/StudySummaryCard.tsx` | 表示のみのカードコンポーネント                       |
+| `components/dashboard/TodayReviewCard.tsx`  | 表示のみのカードコンポーネント                       |
+| `components/dashboard/DailyStudyChart.tsx`  | 表示のみのチャートコンポーネント（recharts 使用）         |
+| `app/api/decks/route.ts`                    | 単純な CRUD                              |
+| `app/api/decks/[id]/route.ts`               | 単純な CRUD                              |
+| `app/api/cards/route.ts`                    | 単純な CRUD                              |
+| `app/api/cards/[id]/route.ts`               | 単純な CRUD                              |
+| `app/api/study-records/route.ts`            | upsert を使った簡潔な記録処理                    |
+| `next.config.ts`                            | 空の設定ファイル                              |
+| `prisma.config.ts`                          | Prisma の設定ファイル（自動生成ベース）               |
+| `eslint.config.mjs`                         | ESLint 設定（Next.js 標準）                 |
+
 
 ---
 
@@ -435,11 +455,13 @@ npm run dev
 
 ## 補足: SRS アルゴリズム早見表
 
-| 評価 | intervalDays (初回) | intervalDays (2回目以降) | easeFactor 変化 | repetitionCount |
-|------|---------------------|------------------------|-----------------|-----------------|
-| again (難しい) | 1日 | 1日（リセット） | -0.2（下限 1.3） | 0にリセット |
-| hard (普通) | 1日 | 前回 × 1.5（切り上げ） | -0.1（下限 1.3） | +1 |
-| good (簡単) | 3日 | 前回 × easeFactor（切り上げ） | +0.1 | +1 |
+
+| 評価          | intervalDays (初回) | intervalDays (2回目以降)  | easeFactor 変化 | repetitionCount |
+| ----------- | ----------------- | --------------------- | ------------- | --------------- |
+| again (難しい) | 1日                | 1日（リセット）              | -0.2（下限 1.3）  | 0にリセット          |
+| hard (普通)   | 1日                | 前回 × 1.5（切り上げ）        | -0.1（下限 1.3）  | +1              |
+| good (簡単)   | 3日                | 前回 × easeFactor（切り上げ） | +0.1          | +1              |
+
 
 **定着済み判定:** `intervalDays >= 21` のカードは「定着済み」として扱われる
 
@@ -447,17 +469,24 @@ npm run dev
 
 ## 変更履歴
 
-| 日付 | 変更内容 |
-|------|---------|
-| 2026-02-09 | 初版作成 |
-| 2026-02-09 | 自由学習モード・定着率改善の設計判断・フロー・コンポーネント情報を追加 |
-| 2026-02-10 | 認証機能（NextAuth.js + Google OAuth）追加。ダッシュボードUI刷新（DailyStudyChart追加、TodayMasteryCard削除）。エラーハンドリングページ、ログインページ、シードスクリプト追加 |
-| 2026-02-13 | 責務分離 一覧取得をSSRに修正進捗30% 対応具体内容:CSRからFetchしていた一覧取得をServer Componentで取得するように変更。Cards取得のみ修正　残: useDeckの取得、useStudyRecordsの取得 |
-| 2026-02-16 | 責務分離 一覧取得をSSRに修正進捗60% 対応具体内容:useDeckの一覧取得をServer Componentで取得するように変更、責務分離をより明確化 残:useStudyRecordsの取得、 「UIの途中状態をユーザーに見せずに、最終形で初回レンダリングしたい」 が現状の課題|
-| 2026-02-09 | 初版作成 | studyRateのapiとDBの操作の責務分離 |
-| 2026-02-18 | テストケース追加。testcase/ 配下に E2E（Playwright）3シナリオとユニット（SRS）の md を追加。要件は requirements/15_test_requirement.md に準拠 |
-| 2026-02-18 | E2E 用シード prisma/seed.e2e.ts 追加。npm run seed:e2e で先頭ユーザー向けに今日 due のカードを再投入。prisma/test.db を .gitignore に追加 |
-| 2026-02-18 | playwright.config.ts で dotenv により .env を読み込み。Playwright が起動する webServer が手元の DATABASE_URL・AUTH_* と同じ設定で動くようにした（03_review_srs 等のデータ不一致対策） |
-| 2026-02-26 | requirements/srs詳細設計.md 追加。SRS アルゴリズム（lib/srs.ts）の詳細設計ドキュメントを新規参画者向けに作成 |
-| 2026-02-26 | requirements/turso/ 配下に Turso 移行の進捗・手順ドキュメント（README.md, 01_turso_migration_progress.md）を追加。12_auth_and_turso.md を Phase C/D 完了・Turso 詳細は turso/ 参照に更新 |
+
+| 日付         | 変更内容                                                                                                                                                                                                          |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-02-09 | 初版作成                                                                                                                                                                                                          |
+| 2026-02-09 | 自由学習モード・定着率改善の設計判断・フロー・コンポーネント情報を追加                                                                                                                                                                           |
+| 2026-02-10 | 認証機能（NextAuth.js + Google OAuth）追加。ダッシュボードUI刷新（DailyStudyChart追加、TodayMasteryCard削除）。エラーハンドリングページ、ログインページ、シードスクリプト追加                                                                                          |
+| 2026-02-13 | 責務分離 一覧取得をSSRに修正進捗30% 対応具体内容:CSRからFetchしていた一覧取得をServer Componentで取得するように変更。Cards取得のみ修正 残: useDeckの取得、useStudyRecordsの取得                                                                                       |
+| 2026-02-16 | 責務分離 一覧取得をSSRに修正進捗60% 対応具体内容:useDeckの一覧取得をServer Componentで取得するように変更、責務分離をより明確化 残:useStudyRecordsの取得、 「UIの途中状態をユーザーに見せずに、最終形で初回レンダリングしたい」 が現状の課題                                                              |
+| 2026-02-09 | 初版作成                                                                                                                                                                                                          |
+| 2026-02-18 | テストケース追加。testcase/ 配下に E2E（Playwright）3シナリオとユニット（SRS）の md を追加。要件は requirements/15_test_requirement.md に準拠                                                                                                     |
+| 2026-02-18 | E2E 用シード prisma/seed.e2e.ts 追加。npm run seed:e2e で先頭ユーザー向けに今日 due のカードを再投入。prisma/test.db を .gitignore に追加                                                                                                     |
+| 2026-02-18 | playwright.config.ts で dotenv により .env を読み込み。Playwright が起動する webServer が手元の DATABASE_URL・AUTH_* と同じ設定で動くようにした（03_review_srs 等のデータ不一致対策）                                                                      |
+| 2026-02-26 | requirements/srs詳細設計.md 追加。SRS アルゴリズム（lib/srs.ts）の詳細設計ドキュメントを新規参画者向けに作成                                                                                                                                       |
+| 2026-02-26 | requirements/turso/ 配下に Turso 移行の進捗・手順ドキュメント（README.md, 01_turso_migration_progress.md）を追加。12_auth_and_turso.md を Phase C/D 完了・Turso 詳細は turso/ 参照に更新                                                         |
 | 2026-02-26 | Turso 移行（ローカル検証まで）: @prisma/adapter-libsql 追加、lib/prisma.ts で TURSO_DATABASE_URL+TURSO_AUTH_TOKEN 時は PrismaLibSql、それ以外は better-sqlite3 に分岐。スキーマ適用手順を requirements/turso/01_turso_migration_progress.md §4 に記載 |
+| 2026-03-13 | export/import API の責務分離: features/cards/repository.ts に getCardsByDeckId, deleteCardsByDeckId, createCardBatch を追加。features/decks/actions.ts を新規作成（exportDeck, importDeckCards）。Route Handler から Prisma 直接操作を排除 |
+| 2026-03-17 | reviews API の責務分離: features/reviews/repository.ts を追加し、/api/reviews の Route Handler から Prisma 直接操作を排除 |
+| 2026-03-17 | 管理者レビュー一覧: 取得失敗の原因を 403 と判別できるよう fetcher で res.ok をチェック。403 時は「管理者権限がありません。」を表示。ARCHITECTURE に ADMIN_EMAILS の前提を追記 |
+| 2026-03-17 | データ初期化: DataInitializer が認証時に GET /api/cards, /api/decks, /api/study-records を呼びストアに反映するよう実装。直接 /review にアクセスした場合でもカードが取得される。review ページはストアが空の間ローディング表示し、取得後に復習対象を表示。Turbopack 落ち時の代替として npm run dev:webpack を追加 |
+
+
