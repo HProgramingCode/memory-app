@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState, useRef } from "react";
+import { use, useState, useRef, useMemo } from "react";
 import {
   Box,
   Typography,
@@ -43,12 +43,12 @@ export default function DeckDetailPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
-  const getDeck = useDeckStore((s) => s.getDeck);
-  const getCardsByDeckId = useCardStore((s) => s.getCardsByDeckId);
+  // 配列そのものを購読し、find/filter は useMemo で派生（セレクタ内で毎回 filter すると新配列になり React 19 の getSnapshot 警告になる）
+  const decks = useDeckStore((s) => s.decks);
+  const allCards = useCardStore((s) => s.cards);
+  const deck = useMemo(() => decks.find((d) => d.id === id), [decks, id]);
+  const cards = useMemo(() => allCards.filter((c) => c.deckId === id), [allCards, id]);
   const deleteCard = useCardStore((s) => s.deleteCard);
-
-  const deck = getDeck(id);
-  const cards = getCardsByDeckId(id);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);

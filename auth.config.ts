@@ -35,7 +35,5 @@ export const authConfig = {
       return session;
     },
   },
-  providers: [
-    Google,
-  ],
+  providers: [Google],
 } satisfies NextAuthConfig;

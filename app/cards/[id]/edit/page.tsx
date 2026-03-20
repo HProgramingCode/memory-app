@@ -1,6 +1,6 @@
 "use client";
 
-import { use } from "react";
+import { use, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Typography } from "@mui/material";
 import AppLayout from "@/components/common/AppLayout";
@@ -18,8 +18,8 @@ export default function EditCardPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
-  const getCard = useCardStore((s) => s.getCard);
-  const card = getCard(id);
+  const allCards = useCardStore((s) => s.cards);
+  const card = useMemo(() => allCards.find((c) => c.id === id), [allCards, id]);
 
   if (!card) {
     return (

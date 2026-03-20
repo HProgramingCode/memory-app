@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect, Suspense } from "react";
+import { useState, useCallback, useEffect, Suspense } from "react";
 import {
   Box,
   Typography,
@@ -37,7 +37,9 @@ function ReviewContent() {
   const searchParams = useSearchParams();
   const deckId = searchParams.get("deckId");
   const mode = searchParams.get("mode");
+  const cardIdParam = searchParams.get("cardId");
   const isFreeMode = mode === "free";
+  const isPreviewMode = mode === "preview" && Boolean(cardIdParam);
 
   const cards = useCardStore((s) => s.cards);
   const getDueCards = useCardStore((s) => s.getDueCards);
@@ -59,6 +61,27 @@ function ReviewContent() {
   const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
+    if (isPreviewMode) {
+      if (!deckId || !cardIdParam) {
+        setIsCompleted(true);
+        return;
+      }
+      if (cards.length === 0) return;
+      const deckCards = getCardsByDeckId(deckId);
+      const one = deckCards.find((c) => c.id === cardIdParam);
+      if (!one) {
+        setIsCompleted(true);
+        return;
+      }
+      setReviewCards([one]);
+      setCurrentIndex(0);
+      setShowAnswer(false);
+      setIsFlipped(false);
+      setShowStartDialog(false);
+      setIsCompleted(false);
+      return;
+    }
+
     if (!isFreeMode && cards.length === 0) return;
 
     let targetCards: CardType[] = [];
@@ -84,7 +107,17 @@ function ReviewContent() {
     if (!isFreeMode || (isFreeMode && deckId && getLastStudyIndex(deckId) === 0)) {
       startSession(targetCards, 0, true);
     }
-  }, [deckId, isFreeMode, cards.length, getCardsByDeckId, getDueCardsByDeckId, getDueCards, getLastStudyIndex]);
+  }, [
+    isPreviewMode,
+    cardIdParam,
+    deckId,
+    isFreeMode,
+    cards.length,
+    getCardsByDeckId,
+    getDueCardsByDeckId,
+    getDueCards,
+    getLastStudyIndex,
+  ]);
 
   const startSession = (cards: CardType[], startIndex: number, shuffle: boolean) => {
     let targetCards = [...cards];
@@ -105,8 +138,9 @@ function ReviewContent() {
   const progress = total > 0 ? ((currentIndex + 1) / total) * 100 : 0;
 
   useEffect(() => {
+    if (isPreviewMode) return;
     if (isFreeMode && deckId && reviewCards.length > 0) setLastStudyIndex(deckId, currentIndex);
-  }, [currentIndex, isFreeMode, deckId, reviewCards, setLastStudyIndex]);
+  }, [currentIndex, isPreviewMode, isFreeMode, deckId, reviewCards, setLastStudyIndex]);
 
   const flipToAnswer = useCallback(() => {
     if (isProcessing) return;
@@ -147,6 +181,11 @@ function ReviewContent() {
     } finally { setIsProcessing(false); }
   }, [currentCard, isFreeMode, applyReview, recordReview, handleNext, advanceCard, isProcessing]);
 
+  const backFromPreview = useCallback(() => {
+    if (deckId) router.push(`/decks/${deckId}`);
+    else router.push("/");
+  }, [deckId, router]);
+
   // ★ キーボードショートカット
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -156,25 +195,40 @@ function ReviewContent() {
       if (e.code === "Space" || e.key === " ") {
         e.preventDefault();
         if (!showAnswer) flipToAnswer();
+        else if (isPreviewMode) backFromPreview();
         else if (isFreeMode) handleNext();
-      } else if (showAnswer && !isFreeMode) {
+      } else if (showAnswer && !isFreeMode && !isPreviewMode) {
         if (e.key === "1") { e.preventDefault(); handleRate("again"); }
         else if (e.key === "2") { e.preventDefault(); handleRate("hard"); }
         else if (e.key === "3") { e.preventDefault(); handleRate("good"); }
       } else if (showAnswer && isFreeMode && e.key === "Enter") {
         e.preventDefault(); handleNext();
+      } else if (showAnswer && isPreviewMode && e.key === "Enter") {
+        e.preventDefault();
+        backFromPreview();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [showAnswer, showStartDialog, isCompleted, isProcessing, isFreeMode, flipToAnswer, handleNext, handleRate]);
+  }, [
+    showAnswer,
+    showStartDialog,
+    isCompleted,
+    isProcessing,
+    isFreeMode,
+    isPreviewMode,
+    flipToAnswer,
+    handleNext,
+    handleRate,
+    backFromPreview,
+  ]);
 
-  if (!isFreeMode && cards.length === 0) {
+  if ((!isFreeMode || isPreviewMode) && cards.length === 0) {
     return <ReviewLoading />;
   }
 
   // ダイアログ
-  if (showStartDialog) {
+  if (showStartDialog && !isPreviewMode) {
     return (
       <Dialog open={true}>
         <DialogTitle sx={{ fontWeight: 700 }}>学習を再開しますか？</DialogTitle>
@@ -210,25 +264,39 @@ function ReviewContent() {
         }}
       >
         <Box sx={{ textAlign: "center", animation: "fadeInUp 0.5s ease-out" }}>
-          <Typography variant="h2" sx={{ mb: 1, animation: "celebrationBounce 1s ease-in-out infinite" }}>
-            🎉
-          </Typography>
+          {!isPreviewMode && (
+            <Typography variant="h2" sx={{ mb: 1, animation: "celebrationBounce 1s ease-in-out infinite" }}>
+              🎉
+            </Typography>
+          )}
           <Typography variant="h4" gutterBottom sx={{ fontWeight: 800, color: "primary.dark" }}>
-            {isFreeMode ? "学習完了！" : "復習完了！"}
+            {isPreviewMode
+              ? "プレビューできません"
+              : isFreeMode
+                ? "学習完了！"
+                : "復習完了！"}
           </Typography>
           <Typography color="text.secondary" sx={{ mb: 1 }}>
-            {total > 0
-              ? `${total} 枚のカードを${isFreeMode ? "学習" : "復習"}しました`
-              : isFreeMode ? "このデッキにカードがありません" : "今日の復習はありません"}
+            {isPreviewMode && total === 0
+              ? "指定したカードが見つかりません。デッキ詳細に戻ってください。"
+              : total > 0
+                ? `${total} 枚のカードを${isFreeMode ? "学習" : "復習"}しました`
+                : isFreeMode
+                  ? "このデッキにカードがありません"
+                  : "今日の復習はありません"}
           </Typography>
-          {total > 0 && (
+          {total > 0 && !isPreviewMode && (
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
               素晴らしい！継続が力になります 💪
             </Typography>
           )}
           <Button
             variant="contained"
-            onClick={() => router.push("/")}
+            onClick={() =>
+              isPreviewMode && deckId
+                ? router.push(`/decks/${deckId}`)
+                : router.push("/")
+            }
             size="large"
             sx={{
               px: 4,
@@ -236,7 +304,7 @@ function ReviewContent() {
               borderRadius: 3,
             }}
           >
-            ダッシュボードに戻る
+            {isPreviewMode && deckId ? "デッキに戻る" : "ダッシュボードに戻る"}
           </Button>
         </Box>
       </Box>
@@ -258,6 +326,18 @@ function ReviewContent() {
       <Box sx={{ px: 2, pt: 2, pb: 1 }}>
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1 }}>
           <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+            {isPreviewMode && (
+              <Box
+                component="span"
+                sx={{
+                  px: 1, py: 0.25, borderRadius: 1,
+                  bgcolor: "rgba(59, 130, 246, 0.12)", color: "#2563eb",
+                  fontSize: "0.7rem", fontWeight: 700, mr: 1,
+                }}
+              >
+                プレビュー
+              </Box>
+            )}
             {isFreeMode && (
               <Box
                 component="span"
@@ -272,52 +352,74 @@ function ReviewContent() {
             )}
             {currentIndex + 1} / {total}
           </Typography>
-          <IconButton size="small" onClick={() => router.push("/")} sx={{ color: "text.secondary" }}>
+          <IconButton
+            size="small"
+            onClick={() => (isPreviewMode && deckId ? router.push(`/decks/${deckId}`) : router.push("/"))}
+            sx={{ color: "text.secondary" }}
+          >
             <CloseIcon />
           </IconButton>
         </Box>
         <LinearProgress variant="determinate" value={progress} />
       </Box>
 
-      {/* カード表示 — 3D Flip */}
+      {/* カード表示 — 3D Flip（長文・画像はカード領域内スクロール、ボタンと重ならない） */}
       <Box
         sx={{
-          flex: 1, display: "flex", flexDirection: "column",
-          alignItems: "center", justifyContent: "center",
-          px: 2, py: 3, maxWidth: 700, mx: "auto", width: "100%",
+          flex: 1,
+          minHeight: 0,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          px: 2,
+          py: 3,
+          maxWidth: 700,
+          mx: "auto",
+          width: "100%",
         }}
       >
-        <Box className="card-flip-container" sx={{ width: "100%", mb: 3 }}>
-          <Box className={`card-flip-inner ${isFlipped ? "flipped" : ""}`}>
-            {/* Front */}
-            <Card className="card-flip-front" sx={{ width: "100%", minHeight: 300, display: "flex", flexDirection: "column" }}>
-              <CardContent sx={{ flex: 1, p: 3 }}>
-                <Box sx={{ display: "inline-block", px: 1.5, py: 0.5, borderRadius: 2, bgcolor: "rgba(99, 102, 241, 0.08)", mb: 2 }}>
-                  <Typography variant="caption" sx={{ color: "#6366f1", fontWeight: 700, fontSize: "0.7rem" }}>
-                    問題
-                  </Typography>
-                </Box>
-                <MarkdownPreview content={currentCard.frontText} />
-                {currentCard.frontImageId && <Box sx={{ mt: 2 }}><CardImage imageId={currentCard.frontImageId} /></Box>}
-              </CardContent>
-            </Card>
-            {/* Back */}
-            <Card className="card-flip-back" sx={{ width: "100%", minHeight: 300, display: "flex", flexDirection: "column" }}>
-              <CardContent sx={{ flex: 1, p: 3 }}>
-                <Box sx={{ display: "inline-block", px: 1.5, py: 0.5, borderRadius: 2, bgcolor: "rgba(16, 185, 129, 0.08)", mb: 2 }}>
-                  <Typography variant="caption" sx={{ color: "#10b981", fontWeight: 700, fontSize: "0.7rem" }}>
-                    答え
-                  </Typography>
-                </Box>
-                <MarkdownPreview content={currentCard.backText} />
-                {currentCard.backImageId && <Box sx={{ mt: 2 }}><CardImage imageId={currentCard.backImageId} /></Box>}
-              </CardContent>
-            </Card>
+        <Box
+          sx={{
+            flex: 1,
+            minHeight: 0,
+            width: "100%",
+            overflowY: "auto",
+            overflowX: "hidden",
+            mb: 2,
+          }}
+        >
+          <Box className="card-flip-container" sx={{ width: "100%" }}>
+            <Box className={`card-flip-inner ${isFlipped ? "flipped" : ""}`}>
+              {/* Front */}
+              <Card className="card-flip-front" sx={{ width: "100%", minHeight: 300, display: "flex", flexDirection: "column" }}>
+                <CardContent sx={{ flex: 1, p: 3 }}>
+                  <Box sx={{ display: "inline-block", px: 1.5, py: 0.5, borderRadius: 2, bgcolor: "rgba(99, 102, 241, 0.08)", mb: 2 }}>
+                    <Typography variant="caption" sx={{ color: "#6366f1", fontWeight: 700, fontSize: "0.7rem" }}>
+                      問題
+                    </Typography>
+                  </Box>
+                  <MarkdownPreview content={currentCard.frontText} />
+                  {currentCard.frontImageId && <Box sx={{ mt: 2 }}><CardImage imageId={currentCard.frontImageId} /></Box>}
+                </CardContent>
+              </Card>
+              {/* Back */}
+              <Card className="card-flip-back" sx={{ width: "100%", minHeight: 300, display: "flex", flexDirection: "column" }}>
+                <CardContent sx={{ flex: 1, p: 3 }}>
+                  <Box sx={{ display: "inline-block", px: 1.5, py: 0.5, borderRadius: 2, bgcolor: "rgba(16, 185, 129, 0.08)", mb: 2 }}>
+                    <Typography variant="caption" sx={{ color: "#10b981", fontWeight: 700, fontSize: "0.7rem" }}>
+                      答え
+                    </Typography>
+                  </Box>
+                  <MarkdownPreview content={currentCard.backText} />
+                  {currentCard.backImageId && <Box sx={{ mt: 2 }}><CardImage imageId={currentCard.backImageId} /></Box>}
+                </CardContent>
+              </Card>
+            </Box>
           </Box>
         </Box>
 
         {/* Action Buttons */}
-        <Box sx={{ width: "100%" }}>
+        <Box sx={{ width: "100%", flexShrink: 0 }}>
           {!showAnswer ? (
             <Button
               variant="contained"
@@ -327,6 +429,17 @@ function ReviewContent() {
               sx={{ py: 1.5, borderRadius: 3, fontSize: "0.95rem" }}
             >
               答えを見る
+              <Box component="span" sx={{ ml: 1.5, opacity: 0.7 }}><kbd>Space</kbd></Box>
+            </Button>
+          ) : isPreviewMode ? (
+            <Button
+              variant="contained"
+              fullWidth
+              size="large"
+              onClick={backFromPreview}
+              sx={{ py: 1.5, borderRadius: 3, fontSize: "0.95rem" }}
+            >
+              デッキに戻る
               <Box component="span" sx={{ ml: 1.5, opacity: 0.7 }}><kbd>Space</kbd></Box>
             </Button>
           ) : isFreeMode ? (

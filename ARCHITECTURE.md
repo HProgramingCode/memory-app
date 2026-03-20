@@ -1,6 +1,6 @@
 # Memory App - 保守・引き継ぎドキュメント
 
-> **最終更新:** 2026-03-17
+> **最終更新:** 2026-03-21
 >
 > このドキュメントは、Memory App のソースコードを保守・改修する人間が「コードを読む前に全体を理解する」ためのものです。
 > コードの逐語的な説明ではなく、**設計意図・判断の理由・注意すべき箇所**に焦点を当てています。
@@ -31,12 +31,13 @@ Phase 1.5「認証機能追加」。NextAuth.js と Google OAuth による認証
 
 1. ユーザーがブラウザで `/` にアクセスする
 2. `app/layout.tsx` が読み込まれ、`ThemeRegistry`（MUI テーマ適用）と `DataInitializer` がマウントされる
-3. `**DataInitializer` が3つの API を並行して呼び出す**:
+3. `**DataInitializer` が3つの API を並行して呼び出す**（認証済みのとき）:
   - `GET /api/decks` → 全デッキ取得
   - `GET /api/cards` → 全カード取得
   - `GET /api/study-records` → 全学習記録取得
+  - いずれかが失敗した場合は短い間隔で最大 3 回リトライ（Strict Mode 再マウント時は effect のクリーンアップで中断し、再マウント後に再度試行）
 4. 取得したデータは **Zustand ストア**（`useDeckStore`, `useCardStore`, `useStudyStore`）に格納される
-5. 以降、フロントエンドの各コンポーネントはストアからデータを読み取る
+5. 以降、フロントエンドの各コンポーネントはストアからデータを読み取る。**注意:** `useDeckStore((s) => s.getDeck)` のように**メソッド参照だけ**を `useStore` のセレクタにすると再レンダーされない。配列は `s.decks` / `s.cards` として購読し、`filter` などの派生は **useMemo** で行う（セレクタで毎回新配列を返さない）。
 
 ### ダッシュボード表示
 
@@ -77,6 +78,13 @@ Phase 1.5「認証機能追加」。NextAuth.js と Google OAuth による認証
 5. **SRS パラメータは更新されない**（nextReviewDate, intervalDays 等は変わらない）
 6. `POST /api/study-records` で `freeStudyCount` を+1カウント（評価別カウントは記録しない）
 7. 全カード完了後、完了画面が表示される
+
+### カードプレビュー（デッキ詳細から）
+
+1. デッキ詳細 (`/decks/[id]`) のカード一覧で、各行の**目アイコン（プレビュー）**から `/review?deckId=xxx&mode=preview&cardId=yyy` に遷移する
+2. 復習画面と**同じ 3D フリップ・Markdown・画像表示**で、その 1 枚だけを確認できる
+3. **SRS も学習記録も更新しない**（閲覧のみ）
+4. 「答えを見る」後は「デッキに戻る」でデッキ詳細へ戻る（閉じるボタンも同様）
 
 ### エクスポート/インポート
 
@@ -240,7 +248,7 @@ memory-app/
 - 自由学習で「簡単」を連打すると `intervalDays` が急上昇し、本来の復習スケジュールが崩れる
 - 自由学習はあくまで「いつでも練習できる」機能であり、SRS とは独立した学習体験として設計
 
-**実装:** 復習画面（`app/review/page.tsx`）が `mode=free` クエリパラメータで動作を切り替える。自由学習時は `applyReview`（SRS 更新）を呼ばず、`recordFreeStudy`（カウントのみ）を呼ぶ。
+**実装:** 復習画面（`app/review/page.tsx`）が `mode=free` クエリパラメータで動作を切り替える。自由学習時は `applyReview`（SRS 更新）を呼ばず、`recordFreeStudy`（カウントのみ）を呼ぶ。`mode=preview` と `cardId` 指定時はデッキ詳細からの閲覧のみで、SRS・学習記録は更新しない。
 
 ### 4-7. 定着率の二重表示（全体定着度 + セッション定着率）
 
@@ -260,6 +268,8 @@ memory-app/
 
 - 復習中はフルフォーカスでカードに集中してほしいという UX 判断
 - ヘッダーの代わりに、プログレスバーと閉じるボタンだけを配置
+
+**補足（レイアウト）:** カードは 3D フリップ用に表裏が `position: absolute`（`app/globals.css`）のため、親のレイアウト高さだけでは長文・大画像分が確保されず、下のアクションボタンと重なることがあった。`app/review/page.tsx` ではカード領域を `flex: 1`・`minHeight: 0`・`overflow-y: auto` の `Box` で包み（カードは領域の**先頭**から配置、**はみ出すときだけ**縦スクロール）、ボタン行を `flexShrink: 0` にして重なりを防いでいる。
 
 ---
 
@@ -336,11 +346,13 @@ memory-app/
 
 API 呼び出しが失敗した場合、`throw new Error(...)` するだけで、ユーザーへのフィードバック（エラーメッセージ表示）がない。設定画面のエクスポート/インポートだけは Snackbar でエラー通知しているが、他の画面には同等の仕組みがない。
 
-### 6-7. `DataInitializer` の初期化タイミング
+### 6-7. `DataInitializer` の初期化タイミングと Zustand の購読
 
-**箇所:** `components/common/DataInitializer.tsx`
+**箇所:** `components/common/DataInitializer.tsx`、ストアを参照する各 Client Component
 
-`initialized` フラグで二重取得を防いでいるが、**データ取得完了を待たずにページが描画される**。つまり、初期表示時にストアが空の状態でレンダリングされ、データ到着後に再レンダリングされる。ローディングインジケーターがないため、一瞬「データがない」状態が見える。
+**データ取得:** 認証直後に API を叩き、**完了を待たず**に先に子ページが描画される。ストアが空の一瞬は避けにくい。
+
+**再レンダー:** Zustand はセレクタの戻り値が変わったときだけコンポーネントを更新する。`useDeckStore((s) => s.getDeck)` のように **関数参照だけ**を返すセレクタでは、`decks` が更新されても戻り値が同じ参照のままになり、**DataInitializer がデータを入れても画面が更新されない**（`/decks/[id]` でリロード後ずっと「デッキが見つかりません」になる典型）。`s.decks` / `s.cards` の**配列参照**を購読し、`find` / `filter` などで毎回**新しい配列・オブジェクトをセレクタの戻り値にしない**こと（React 19 では `getSnapshot` の不安定さで無限ループ警告になる）。派生値は `useMemo` で求める。
 
 ---
 
@@ -488,5 +500,10 @@ npm run dev
 | 2026-03-17 | reviews API の責務分離: features/reviews/repository.ts を追加し、/api/reviews の Route Handler から Prisma 直接操作を排除 |
 | 2026-03-17 | 管理者レビュー一覧: 取得失敗の原因を 403 と判別できるよう fetcher で res.ok をチェック。403 時は「管理者権限がありません。」を表示。ARCHITECTURE に ADMIN_EMAILS の前提を追記 |
 | 2026-03-17 | データ初期化: DataInitializer が認証時に GET /api/cards, /api/decks, /api/study-records を呼びストアに反映するよう実装。直接 /review にアクセスした場合でもカードが取得される。review ページはストアが空の間ローディング表示し、取得後に復習対象を表示。Turbopack 落ち時の代替として npm run dev:webpack を追加 |
+| 2026-03-20 | 復習画面: 長文・画像でカードとアクションボタンが重なる問題を、カード領域のスクロール（flex + minHeight:0 + overflow-y）とボタン行の flexShrink:0 で解消。4-8 にレイアウト補足を追記 |
+| 2026-03-20 | 復習画面: カード用スクロール枠から flex + 縦中央寄せを外し、カード先頭揃え・オーバーフロー時のみ `overflow-y: auto` が効くように調整 |
+| 2026-03-21 | デッキ詳細のカード一覧にプレビュー（目アイコン）を追加。`/review?deckId=&mode=preview&cardId=` で復習画面同等の表示のみ（SRS・記録なし）。フロー説明を ARCHITECTURE に追記 |
+| 2026-03-21 | デッキ詳細・カード編集: Zustand を `getDeck` / `getCard` の参照だけ購読していたため DataInitializer 後も再レンダーされない問題を修正（`decks` / `cards` から find）。DataInitializer を ref 依存の一度きり取得からやめ、リトライ付きに再整理。§2・6-7 を更新 |
+| 2026-03-21 | デッキ詳細・カード編集: セレクタ内の `filter` / `find` 直返しをやめ、`s.cards` / `s.decks` 購読 + `useMemo` 派生に変更（React 19 の getSnapshot キャッシュ警告対策）。6-7 を追記 |
 
 
