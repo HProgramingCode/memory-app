@@ -24,6 +24,18 @@ import CardImage from "@/components/review/CardImage";
 import ReviewLoading from "@/app/review/loading";
 import type { ReviewRating, Card as CardType } from "@/types";
 
+/** iOS Safari 等で 100vh が可視領域より大きくなり下端 UI が隠れるのを避ける */
+const reviewViewportFillSx = {
+  minHeight: "100vh",
+  height: "100vh",
+  maxHeight: "100vh",
+  "@supports (height: 100dvh)": {
+    minHeight: "100dvh",
+    height: "100dvh",
+    maxHeight: "100dvh",
+  },
+} as const;
+
 export default function ReviewPage() {
   return (
     <Suspense>
@@ -254,13 +266,14 @@ function ReviewContent() {
     return (
       <Box
         sx={{
-          minHeight: "100vh",
+          ...reviewViewportFillSx,
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
           bgcolor: "background.default",
           p: 3,
+          boxSizing: "border-box",
         }}
       >
         <Box sx={{ textAlign: "center", animation: "fadeInUp 0.5s ease-out" }}>
@@ -316,10 +329,12 @@ function ReviewContent() {
   return (
     <Box
       sx={{
-        minHeight: "100vh",
+        ...reviewViewportFillSx,
         bgcolor: "background.default",
         display: "flex",
         flexDirection: "column",
+        overflow: "hidden",
+        boxSizing: "border-box",
       }}
     >
       {/* プログレスバー */}
@@ -385,6 +400,8 @@ function ReviewContent() {
             width: "100%",
             overflowY: "auto",
             overflowX: "hidden",
+            WebkitOverflowScrolling: "touch",
+            overscrollBehavior: "contain",
             mb: 2,
           }}
         >
@@ -418,8 +435,14 @@ function ReviewContent() {
           </Box>
         </Box>
 
-        {/* Action Buttons */}
-        <Box sx={{ width: "100%", flexShrink: 0 }}>
+        {/* Action Buttons（ホームインジケータ避け + 常にカード列の下に固定） */}
+        <Box
+          sx={{
+            width: "100%",
+            flexShrink: 0,
+            pb: "max(12px, env(safe-area-inset-bottom, 0px))",
+          }}
+        >
           {!showAnswer ? (
             <Button
               variant="contained"
