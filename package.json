@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:webpack": "next dev --webpack",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
@@ -30,6 +31,7 @@
     "react-syntax-highlighter": "^16.1.0",
     "recharts": "^3.7.0",
     "remark-gfm": "^4.0.1",
+    "swr": "^2.4.1",
     "uuid": "^13.0.0",
     "zustand": "^5.0.11"
   },

@@ -23,10 +23,7 @@ export function createCardRaw(data: Prisma.CardUncheckedCreateInput) {
   });
 }
 
-export function updateCard(
-  id: string,
-  data: Prisma.CardUncheckedUpdateInput
-) {
+export function updateCard(id: string, data: Prisma.CardUncheckedUpdateInput) {
   return prisma.card.update({
     where: { id },
     data,
@@ -37,4 +34,30 @@ export function deleteCard(id: string) {
   return prisma.card.delete({
     where: { id },
   });
+}
+
+export function getCardsByDeckId(userId: string, deckId: string) {
+  return prisma.card.findMany({
+    where: { userId, deckId },
+    orderBy: { createdAt: "asc" },
+  });
+}
+
+export function deleteCardsByDeckId(
+  userId: string,
+  deckId: string,
+  tx?: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
+) {
+  const client = tx ?? prisma;
+  return client.card.deleteMany({
+    where: { userId, deckId },
+  });
+}
+
+export function createCardBatch(
+  cards: Prisma.CardUncheckedCreateInput[],
+  tx?: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
+) {
+  const client = tx ?? prisma;
+  return Promise.all(cards.map((data) => client.card.create({ data })));
 }

@@ -3,3 +3,5 @@ ARCHITECTURE.md
 
 # requirements 配下をすべて除外
 requirements/**
+
+Plan/**

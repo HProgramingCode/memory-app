@@ -56,7 +56,7 @@ export interface StudyRecord {
 /** 評価 */
 export type Rating = "again" | "hard" | "good";
 
-/** エクスポート用データ構造 */
+/** 全体エクスポート用データ構造 */
 export interface ExportData {
   version: 1;
   exportedAt: string;
@@ -64,6 +64,18 @@ export interface ExportData {
   cards: Card[];
   studyRecords: StudyRecord[];
   /** Base64エンコードされた画像データ */
+  images: { id: string; data: string; type: string }[];
+}
+
+/** デッキ単位エクスポート用データ構造 */
+export interface DeckExportData {
+  version: 1;
+  exportedAt: string;
+  /** 対象デッキ（1件のみ） */
+  deck: Deck;
+  /** 対象デッキに属するカードのみ */
+  cards: Card[];
+  /** Base64エンコードされた画像データ（対象デッキのカードが参照する画像のみ） */
   images: { id: string; data: string; type: string }[];
 }
 

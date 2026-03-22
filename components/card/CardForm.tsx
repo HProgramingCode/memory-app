@@ -70,6 +70,8 @@ export default function CardForm({
   const [newFrontImage, setNewFrontImage] = useState<File | null>(null);
   const [newBackImage, setNewBackImage] = useState<File | null>(null);
 
+  const [isSaving, setIsSaving] = useState(false);
+
   // プレビュータブ
   const [frontTab, setFrontTab] = useState(0);
   const [backTab, setBackTab] = useState(0);
@@ -82,8 +84,12 @@ export default function CardForm({
   }, [decks, deckId]);
 
   const handleSave = async () => {
+    if (isSaving) return;
+
+    setIsSaving(true);
+
     if (!deckId || (!frontText.trim() && !frontImageId && !newFrontImage))
-      return;
+      return setIsSaving(false);
 
     // 画像を IndexedDB に保存
     let finalFrontImageId = frontImageId;
@@ -117,25 +123,29 @@ export default function CardForm({
       finalBackImageId = id;
     }
 
-    if (existingCard) {
-      await updateCard(existingCard.id, {
-        deckId,
-        frontText,
-        backText,
-        frontImageId: finalFrontImageId,
-        backImageId: finalBackImageId,
-      });
-    } else {
-      await addCard({
-        deckId,
-        frontText,
-        backText,
-        frontImageId: finalFrontImageId,
-        backImageId: finalBackImageId,
-      });
-    }
+    try {
+      if (existingCard) {
+        await updateCard(existingCard.id, {
+          deckId,
+          frontText,
+          backText,
+          frontImageId: finalFrontImageId,
+          backImageId: finalBackImageId,
+        });
+      } else {
+        await addCard({
+          deckId,
+          frontText,
+          backText,
+          frontImageId: finalFrontImageId,
+          backImageId: finalBackImageId,
+        });
+      }
 
-    onSaved?.();
+      onSaved?.();
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   /** Markdown ツールバーの装飾挿入 */
@@ -329,10 +339,12 @@ export default function CardForm({
           variant="contained"
           onClick={handleSave}
           disabled={
-            !deckId || (!frontText.trim() && !frontImageId && !newFrontImage)
+            isSaving ||
+            !deckId ||
+            (!frontText.trim() && !frontImageId && !newFrontImage)
           }
         >
-          {existingCard ? "更新" : "保存"}
+          {isSaving ? "保存中..." : existingCard ? "更新" : "保存"}
         </Button>
       </Stack>
     </Box>
